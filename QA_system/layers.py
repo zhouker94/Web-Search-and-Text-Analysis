@@ -9,9 +9,8 @@
 import tensorflow as tf
 
 
-def encoder_block(inputs, num_conv_layers, kernel_size, num_filters=128, scope="encoder_block"):
+def encoder_block(inputs, num_conv_layers, kernel_size, scope, num_filters=128):
     with tf.variable_scope(scope):
-
         with tf.variable_scope("conv_block"):
             curr_inputs = inputs
             for i in range(num_conv_layers):
@@ -35,3 +34,26 @@ def encoder_block(inputs, num_conv_layers, kernel_size, num_filters=128, scope="
                                                    weights_initializer=tf.truncated_normal_initializer(stddev=0.01))
         outputs = fc
         return outputs
+
+
+def rnn_encoder_block(inputs, dropout_keep_prob, is_q, scope):
+    with tf.variable_scope(scope):
+        norm_layer = tf.contrib.layers.layer_norm(inputs)
+
+        gru_cell = tf.contrib.rnn.GRUCell(num_units=128, activation=tf.nn.relu)
+        rnn_layer = tf.contrib.rnn.DropoutWrapper(gru_cell,
+                                                  input_keep_prob=dropout_keep_prob,
+                                                  output_keep_prob=dropout_keep_prob,
+                                                  state_keep_prob=dropout_keep_prob,
+                                                  )
+        attention_cell = tf.contrib.rnn.AttentionCellWrapper(rnn_layer, 7)
+        encode_out, states = tf.nn.dynamic_rnn(cell=attention_cell, inputs=norm_layer, dtype=tf.float32)
+
+    if is_q:
+        # shape [batch_size, cell_state_size]
+        outputs = states[0]
+    else:
+        # shape [batch_size, context_length, cell_state_size]
+        outputs = encode_out
+
+    return outputs

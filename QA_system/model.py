@@ -52,7 +52,6 @@ class QANetModel(Model):
                                shape=[-1, -1, const.WORD_EMBEDDING_DIM])
 
         with tf.variable_scope("Embedding_Encoder_Layer"):
-<<<<<<< HEAD
             c = layers.encoder_block(c_emb, const.NUM_CONV_LAYERS, 7)
             q = layers.encoder_block(q_emb, const.NUM_CONV_LAYERS, 7)
         """
@@ -79,13 +78,17 @@ class EncoderDecoderModel(Model):
             qc_encode_layer_2 = layers.rnn_encoder_block(qc_encode_layer_1, self.dropout_keep_prob, False, "ec2")
             qc_encode_layer_3 = layers.rnn_encoder_block(qc_encode_layer_2, self.dropout_keep_prob, False, "ec3")
 
-            fc_1 = tf.contrib.layers.fully_connected(tf.concat([qc_encode_layer_1, qc_encode_layer_2], axis=1),
+            fc_1 = tf.contrib.layers.fully_connected(tf.concat([qc_encode_layer_1, qc_encode_layer_2], axis=2),
                                                      1,
-                                                     weights_initializer=tf.truncated_normal_initializer(stddev=0.01))
+                                                     weights_initializer=tf.truncated_normal_initializer(stddev=0.01),
+                                                     activation_fn=None
+                                                    )
 
-            fc_2 = tf.contrib.layers.fully_connected(tf.concat([qc_encode_layer_2, qc_encode_layer_3], axis=1),
+            fc_2 = tf.contrib.layers.fully_connected(tf.concat([qc_encode_layer_2, qc_encode_layer_3], axis=2),
                                                      1,
-                                                     weights_initializer=tf.truncated_normal_initializer(stddev=0.01))
+                                                     weights_initializer=tf.truncated_normal_initializer(stddev=0.01),
+                                                     activation_fn=None
+                                                    )
 
         with tf.variable_scope("loss"):
             cross_entropy_1 = \

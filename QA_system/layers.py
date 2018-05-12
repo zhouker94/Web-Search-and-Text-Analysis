@@ -9,17 +9,8 @@
 import tensorflow as tf
 
 
-<<<<<<< HEAD
 def encoder_block(inputs, num_conv_layers, kernel_size, scope, num_filters=128):
     with tf.variable_scope(scope):
-=======
-def encoder_block(inputs, num_conv_layers, kernel_size, keep_prob, num_filters=128, scope="encoder_block"):
-    with tf.variable_scope(scope):
-
-        with tf.variable_scope("position_encoding"):
-            pe = pos_encoding(inputs)
-
->>>>>>> refs/remotes/origin/master
         with tf.variable_scope("conv_block"):
             curr_inputs = pe
             for i in range(num_conv_layers):
@@ -47,7 +38,6 @@ def encoder_block(inputs, num_conv_layers, kernel_size, keep_prob, num_filters=1
         return outputs
 
 
-<<<<<<< HEAD
 def rnn_encoder_block(inputs, dropout_keep_prob, is_q, scope):
     with tf.variable_scope(scope):
         norm_layer = tf.contrib.layers.layer_norm(inputs)
@@ -69,16 +59,3 @@ def rnn_encoder_block(inputs, dropout_keep_prob, is_q, scope):
         outputs = encode_out
 
     return outputs
-=======
-def pos_encoding(x):
-    pass
-'''
-    (_, d, l) = x.size()
-    pos = torch.arange(l).repeat(d, 1)
-    tmp1 = tf.multiply(pos, freqs)
-    tmp2 = tf.add(tmp1, phases)
-    pos_enc = tf.sin(tmp2)
-    out = tf.sin(pos_enc) + x
-    return out
-'''
->>>>>>> refs/remotes/origin/master

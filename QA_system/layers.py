@@ -9,15 +9,25 @@
 import tensorflow as tf
 
 
+<<<<<<< HEAD
 def encoder_block(inputs, num_conv_layers, kernel_size, scope, num_filters=128):
     with tf.variable_scope(scope):
+=======
+def encoder_block(inputs, num_conv_layers, kernel_size, keep_prob, num_filters=128, scope="encoder_block"):
+    with tf.variable_scope(scope):
+
+        with tf.variable_scope("position_encoding"):
+            pe = pos_encoding(inputs)
+
+>>>>>>> refs/remotes/origin/master
         with tf.variable_scope("conv_block"):
-            curr_inputs = inputs
+            curr_inputs = pe
             for i in range(num_conv_layers):
-                init = curr_inputs
+                res = curr_inputs
                 curr_inputs = tf.contrib.layers.layer_norm(curr_inputs)
-                curr_inputs = tf.contrib.layers.conv2d(curr_inputs, num_filters, kernel_size)
-                curr_inputs = tf.add(curr_inputs, init)
+                curr_inputs = tf.layers.conv1d(curr_inputs, num_filters, kernel_size, padding="SAME",
+                                               activation=tf.nn.relu)
+                curr_inputs = tf.add(curr_inputs, res)
 
         with tf.variable_scope("self_attention_block"):
             init = curr_inputs
@@ -32,10 +42,12 @@ def encoder_block(inputs, num_conv_layers, kernel_size, scope, num_filters=128):
             fc = tf.contrib.layers.fully_connected(layer_norm_2,
                                                    128,
                                                    weights_initializer=tf.truncated_normal_initializer(stddev=0.01))
-        outputs = fc
+            outputs = tf.nn.dropout(fc, keep_prob)
+
         return outputs
 
 
+<<<<<<< HEAD
 def rnn_encoder_block(inputs, dropout_keep_prob, is_q, scope):
     with tf.variable_scope(scope):
         norm_layer = tf.contrib.layers.layer_norm(inputs)
@@ -57,3 +69,16 @@ def rnn_encoder_block(inputs, dropout_keep_prob, is_q, scope):
         outputs = encode_out
 
     return outputs
+=======
+def pos_encoding(x):
+    pass
+'''
+    (_, d, l) = x.size()
+    pos = torch.arange(l).repeat(d, 1)
+    tmp1 = tf.multiply(pos, freqs)
+    tmp2 = tf.add(tmp1, phases)
+    pos_enc = tf.sin(tmp2)
+    out = tf.sin(pos_enc) + x
+    return out
+'''
+>>>>>>> refs/remotes/origin/master

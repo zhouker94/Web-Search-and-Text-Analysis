@@ -9,16 +9,11 @@
 import tensorflow as tf
 import constants as const
 import layers
+import numpy as np
 
 
 class Model(object):
-    def __init__(self):
-        self.context = tf.placeholder(tf.float32,
-                                      [1, None, const.WORD_EMBEDDING_DIM],
-                                      "context_input")
-        self.question = tf.placeholder(tf.int32,
-                                       [None, None, const.WORD_EMBEDDING_DIM],
-                                       "question_input")
+    def __init__(self, c_index, q_index, emb_mat):
         self.label_start = tf.placeholder(tf.float32,
                                           [None, None, 1],
                                           "start_label")
@@ -28,10 +23,10 @@ class Model(object):
 
         self.dropout_keep_prob = tf.placeholder(dtype=tf.float32, shape=[], name='dropout_keep_prob')
 
-        self.emb_mat = tf.Variable(tf.constant(0.0, shape=[const.VOCABULARY_SIZE, const.WORD_EMBEDDING_DIM]),
-                                   trainable=False, name="embedding_matrix")
-        self.embedding_placeholder = tf.placeholder(tf.float32, [const.VOCABULARY_SIZE, const.WORD_EMBEDDING_DIM])
-        self.embedding_init = self.emb_mat.assign(self.embedding_placeholder)
+        self.emb_mat = tf.constant(emb_mat)
+
+        self.context_input = tf.nn.embedding_lookup(self.emb_mat, c_index, name="context_input")
+        self.question_input = tf.nn.embedding_lookup(self.emb_mat, q_index, name="question_input")
 
         self._build_model()
 
@@ -58,16 +53,16 @@ class QANetModel(Model):
 
 
 class EncoderDecoderModel(Model):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, c_index, q_index, emb_mat):
+        super().__init__(c_index, q_index, emb_mat)
 
     def _build_model(self):
         with tf.variable_scope("context_encoder_block"):
-            encode_c = layers.rnn_encoder_block(self.context, self.dropout_keep_prob, False, "ecc")
+            encode_c = layers.rnn_encoder_block(self.context_input, self.dropout_keep_prob, False, "ecc")
             encode_c_unstuck = tf.unstack(encode_c, axis=0)[0]
 
         with tf.variable_scope("question_encoder_block"):
-            encode_q = layers.rnn_encoder_block(self.question, self.dropout_keep_prob, True, "ecq")
+            encode_q = layers.rnn_encoder_block(self.question_input, self.dropout_keep_prob, True, "ecq")
 
         with tf.variable_scope("question_context_attention"):
             similarity = tf.map_fn(lambda x: tf.multiply(x, encode_c_unstuck), encode_q)
@@ -82,13 +77,13 @@ class EncoderDecoderModel(Model):
                                                      1,
                                                      weights_initializer=tf.truncated_normal_initializer(stddev=0.01),
                                                      activation_fn=None
-                                                    )
+                                                     )
 
             fc_2 = tf.contrib.layers.fully_connected(tf.concat([qc_encode_layer_2, qc_encode_layer_3], axis=2),
                                                      1,
                                                      weights_initializer=tf.truncated_normal_initializer(stddev=0.01),
                                                      activation_fn=None
-                                                    )
+                                                     )
 
         with tf.variable_scope("loss"):
             cross_entropy_1 = \
@@ -101,4 +96,4 @@ class EncoderDecoderModel(Model):
 
 
 if __name__ == "__main__":
-    EncoderDecoderModel()
+    EncoderDecoderModel(np.asarray([1, 2, 3]), np.asarray([4, 5, 6]), np.asarray([[4, 5, 6]]))

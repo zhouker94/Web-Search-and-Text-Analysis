@@ -8,7 +8,7 @@
 
 import tensorflow as tf
 
-
+'''
 def encoder_block(inputs, num_conv_layers, kernel_size, scope, num_filters=128):
     with tf.variable_scope(scope):
         with tf.variable_scope("conv_block"):
@@ -36,6 +36,7 @@ def encoder_block(inputs, num_conv_layers, kernel_size, scope, num_filters=128):
             outputs = tf.nn.dropout(fc, keep_prob)
 
         return outputs
+'''
 
 
 def rnn_encoder_block(inputs, dropout_keep_prob, is_q, scope):

@@ -14,8 +14,8 @@ import numpy as np
 
 class Model(object):
     def __init__(self, emb_mat):
-        self.context_input = tf.placeholder(tf.int32, shape=[None, None], name="context_input")
-        self.question_input = tf.placeholder(tf.int32, shape=[None, None], name="question_input")
+        self.context_input = tf.placeholder(tf.int32, shape=[const.BATCH_SIZE, None], name="context_input")
+        self.question_input = tf.placeholder(tf.int32, shape=[const.BATCH_SIZE, None], name="question_input")
 
         self.label_start = tf.placeholder(tf.float32,
                                           [None, None, 1],
@@ -62,6 +62,7 @@ class EncoderDecoderModel(Model):
     def _build_model(self):
         with tf.variable_scope("context_encoder_block"):
             encode_c = layers.rnn_encoder_block(self.c, self.dropout_keep_prob, False, "ec")
+            print(encode_c.shape)
             encode_c_unstuck = tf.unstack(encode_c, axis=0)[0]
 
         with tf.variable_scope("question_encoder_block"):

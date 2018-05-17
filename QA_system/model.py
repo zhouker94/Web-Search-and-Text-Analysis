@@ -13,7 +13,10 @@ import numpy as np
 
 
 class Model(object):
-    def __init__(self, c_index, q_index, emb_mat):
+    def __init__(self, emb_mat):
+        self.context_input = tf.placeholder(tf.int32, shape=[None, None], name="context_input")
+        self.question_input = tf.placeholder(tf.int32, shape=[None, None], name="question_input")
+
         self.label_start = tf.placeholder(tf.float32,
                                           [None, None, 1],
                                           "start_label")
@@ -23,10 +26,10 @@ class Model(object):
 
         self.dropout_keep_prob = tf.placeholder(dtype=tf.float32, shape=[], name='dropout_keep_prob')
 
-        self.emb_mat = tf.constant(emb_mat)
-
-        self.context_input = tf.nn.embedding_lookup(self.emb_mat, c_index, name="context_input")
-        self.question_input = tf.nn.embedding_lookup(self.emb_mat, q_index, name="question_input")
+        self.emb_mat = tf.Variable(emb_mat, trainable=False, dtype=tf.float32)
+        self.c = tf.nn.embedding_lookup(params=self.emb_mat, ids=self.context_input)
+        self.q = tf.nn.embedding_lookup(params=self.emb_mat, ids=self.question_input)
+        self.opm = None
 
         self._build_model()
 
@@ -34,12 +37,12 @@ class Model(object):
         pass
 
 
+"""
 class QANetModel(Model):
     def __init__(self):
         super().__init__()
 
     def _build_model(self):
-        """
         with tf.variable_scope("Input_Embedding_Layer"):
             c_emb = tf.reshape(tensor=tf.nn.embedding_lookup(self.emb_mat, self.context),
                                shape=[-1, -1, const.WORD_EMBEDDING_DIM])
@@ -49,20 +52,20 @@ class QANetModel(Model):
         with tf.variable_scope("Embedding_Encoder_Layer"):
             c = layers.encoder_block(c_emb, const.NUM_CONV_LAYERS, 7)
             q = layers.encoder_block(q_emb, const.NUM_CONV_LAYERS, 7)
-        """
+"""
 
 
 class EncoderDecoderModel(Model):
-    def __init__(self, c_index, q_index, emb_mat):
-        super().__init__(c_index, q_index, emb_mat)
+    def __init__(self, emb_mat):
+        super().__init__(emb_mat)
 
     def _build_model(self):
         with tf.variable_scope("context_encoder_block"):
-            encode_c = layers.rnn_encoder_block(self.context_input, self.dropout_keep_prob, False, "ecc")
+            encode_c = layers.rnn_encoder_block(self.c, self.dropout_keep_prob, False, "ec")
             encode_c_unstuck = tf.unstack(encode_c, axis=0)[0]
 
         with tf.variable_scope("question_encoder_block"):
-            encode_q = layers.rnn_encoder_block(self.question_input, self.dropout_keep_prob, True, "ecq")
+            encode_q = layers.rnn_encoder_block(self.q, self.dropout_keep_prob, True, "eq")
 
         with tf.variable_scope("question_context_attention"):
             similarity = tf.map_fn(lambda x: tf.multiply(x, encode_c_unstuck), encode_q)
@@ -92,8 +95,9 @@ class EncoderDecoderModel(Model):
                 tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.label_end, logits=fc_2))
 
             with tf.name_scope('adam_optimizer'):
-                train_step = tf.train.AdamOptimizer(1e-4).minimize(tf.add(cross_entropy_1, cross_entropy_2))
+                self.opm = tf.train.AdamOptimizer(1e-4).minimize(tf.add(cross_entropy_1, cross_entropy_2),
+                                                                 name="optimizer")
 
 
 if __name__ == "__main__":
-    EncoderDecoderModel(np.asarray([1, 2, 3]), np.asarray([4, 5, 6]), np.asarray([[4, 5, 6]]))
+    EncoderDecoderModel(np.asarray([[4, 5, 6]]))

@@ -91,13 +91,14 @@ class EncoderDecoderModel(Model):
 
         with tf.variable_scope("loss"):
             cross_entropy_1 = \
-                tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.label_start, logits=fc_1))
+                tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.label_start, logits=fc_1), axis=1)
             cross_entropy_2 = \
-                tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.label_end, logits=fc_2))
+                tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.label_end, logits=fc_2), axis=1)
+
+            self.loss = tf.add(cross_entropy_1, cross_entropy_2, name="loss")
 
             with tf.name_scope('adam_optimizer'):
-                self.opm = tf.train.AdamOptimizer(1e-4).minimize(tf.add(cross_entropy_1, cross_entropy_2),
-                                                                 name="optimizer")
+                self.opm = tf.train.AdamOptimizer(1e-4).minimize(self.loss,name="optimizer")
 
 
 if __name__ == "__main__":

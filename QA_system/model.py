@@ -18,10 +18,10 @@ class Model(object):
         self.question_input = tf.placeholder(tf.int32, shape=[const.BATCH_SIZE, None], name="question_input")
 
         self.label_start = tf.placeholder(tf.float32,
-                                          [None, None, 1],
+                                          [None, None],
                                           "start_label")
         self.label_end = tf.placeholder(tf.float32,
-                                        [None, None, 1],
+                                        [None, None],
                                         "end_label")
 
         self.dropout_keep_prob = tf.placeholder(dtype=tf.float32, shape=[], name='dropout_keep_prob')
@@ -62,7 +62,6 @@ class EncoderDecoderModel(Model):
     def _build_model(self):
         with tf.variable_scope("context_encoder_block"):
             encode_c = layers.rnn_encoder_block(self.c, self.dropout_keep_prob, False, "ec")
-            print(encode_c.shape)
             encode_c_unstuck = tf.unstack(encode_c, axis=0)[0]
 
         with tf.variable_scope("question_encoder_block"):
@@ -88,14 +87,16 @@ class EncoderDecoderModel(Model):
                                                      weights_initializer=tf.truncated_normal_initializer(stddev=0.01),
                                                      activation_fn=None
                                                      )
+            fc_1 = tf.unstack(fc_1, axis=-1)[0]
+            fc_2 = tf.unstack(fc_2, axis=-1)[0]
 
         with tf.variable_scope("loss"):
             cross_entropy_1 = \
-                tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.label_start, logits=fc_1), axis=1)
+                tf.nn.softmax_cross_entropy_with_logits(labels=self.label_start, logits=fc_1)
             cross_entropy_2 = \
-                tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.label_end, logits=fc_2), axis=1)
+                tf.nn.softmax_cross_entropy_with_logits(labels=self.label_end, logits=fc_2)
 
-            self.loss = tf.add(cross_entropy_1, cross_entropy_2, name="loss")
+            self.loss = tf.reduce_mean(tf.add(cross_entropy_1, cross_entropy_2, name="loss"))
 
             with tf.name_scope('adam_optimizer'):
                 self.opm = tf.train.AdamOptimizer(1e-4).minimize(self.loss,name="optimizer")

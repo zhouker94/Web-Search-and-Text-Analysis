@@ -17,18 +17,29 @@ class Layers:
             print(norm_layer.shape)
 
             gru_cell_fw = tf.nn.rnn_cell.MultiRNNCell([Layers.dropout_wrapped_gru_cell(dropout_keep_prob)
-                                                       for _ in range(3)])
+                                                       for _ in range(2)])
             gru_cell_bw = tf.nn.rnn_cell.MultiRNNCell([Layers.dropout_wrapped_gru_cell(dropout_keep_prob)
-                                                       for _ in range(3)])
+                                                       for _ in range(2)])
 
             encode_out, _ = tf.nn.bidirectional_dynamic_rnn(cell_fw=gru_cell_fw,
                                                             cell_bw=gru_cell_bw,
                                                             inputs=norm_layer,
                                                             dtype=tf.float32)
+            encode_out = tf.concat(encode_out, 2)
+            encode_out = Layers.self_attention(encode_out)
 
-        encode_out = tf.concat(encode_out, 2)
         # shape [batch_size, word_length, encode_size]
         return encode_out
+
+    @staticmethod
+    def self_attention(encoder_output):
+        # (batch, words, ecode)
+        W_1 = tf.layers.dense(encoder_output, 64, use_bias=False)
+        W_2 = tf.layers.dense(encoder_output, 64, use_bias=False)
+
+        # (batch, word, word)
+        W_1_2 = tf.matmul(W_1, tf.transpose(W_2, [0, 2, 1]))
+        return tf.matmul(tf.nn.softmax(W_1_2), encoder_output)
 
     @staticmethod
     def dropout_wrapped_gru_cell(in_keep_prob):

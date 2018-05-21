@@ -49,13 +49,15 @@ def convert_word_to_embedding_index(word, voc):
 # In[ ]:
 
 with tf.Session() as sess:
+    saver = tf.train.Saver()
     writer = tf.summary.FileWriter('model/train', sess.graph)
 
     sess.run(tf.global_variables_initializer())
 
-    batch_i = 0
     global_step = 0
+    
     for epoch in range(5):
+        batch_i = 0
         while batch_i < len(training_data):
             start = batch_i
             end = batch_i + const.BATCH_SIZE
@@ -102,3 +104,7 @@ with tf.Session() as sess:
             print("Epoch:", epoch, "loss:", loss)
             batch_i += const.BATCH_SIZE
             global_step += 1
+
+    save_path = saver.save(sess, "model/rnn")
+    print("Model saved in path: %s" % save_path)
+

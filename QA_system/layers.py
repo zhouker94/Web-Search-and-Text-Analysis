@@ -10,6 +10,7 @@ import tensorflow as tf
 
 
 class Layers:
+
     @staticmethod
     def rnn_encoder_block(inputs, dropout_keep_prob, scope):
         with tf.variable_scope(scope):
@@ -17,15 +18,16 @@ class Layers:
             print(norm_layer.shape)
 
             gru_cell_fw = tf.nn.rnn_cell.MultiRNNCell([Layers.dropout_wrapped_gru_cell(dropout_keep_prob)
-                                                       for _ in range(2)])
+                                                       for _ in range(3)])
             gru_cell_bw = tf.nn.rnn_cell.MultiRNNCell([Layers.dropout_wrapped_gru_cell(dropout_keep_prob)
-                                                       for _ in range(2)])
+                                                       for _ in range(3)])
 
             encode_out, _ = tf.nn.bidirectional_dynamic_rnn(cell_fw=gru_cell_fw,
                                                             cell_bw=gru_cell_bw,
                                                             inputs=norm_layer,
                                                             dtype=tf.float32)
             encode_out = tf.concat(encode_out, 2)
+            print(encode_out.shape)
             encode_out = Layers.self_attention(encode_out)
 
         # shape [batch_size, word_length, encode_size]
@@ -34,8 +36,8 @@ class Layers:
     @staticmethod
     def self_attention(encoder_output):
         # (batch, words, ecode)
-        W_1 = tf.layers.dense(encoder_output, 64, use_bias=False)
-        W_2 = tf.layers.dense(encoder_output, 64, use_bias=False)
+        W_1 = tf.layers.dense(encoder_output, 128, use_bias=False)
+        W_2 = tf.layers.dense(encoder_output, 128, use_bias=False)
 
         # (batch, word, word)
         W_1_2 = tf.matmul(W_1, tf.transpose(W_2, [0, 2, 1]))

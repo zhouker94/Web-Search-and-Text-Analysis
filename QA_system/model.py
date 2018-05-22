@@ -59,23 +59,21 @@ class EncoderDecoderModel(Model):
             concat_cq = tf.matmul(norm_similarity, encode_q)
 
         with tf.variable_scope("qc_encoder_block"):
-            qc_encode_layer_1 = Layers.rnn_encoder_block(concat_cq, self.dropout_keep_prob, "ec1")
-            qc_encode_layer_2 = Layers.rnn_encoder_block(qc_encode_layer_1, self.dropout_keep_prob, "ec2")
-            qc_encode_layer_3 = Layers.rnn_encoder_block(qc_encode_layer_2, self.dropout_keep_prob, "ec3")
+            qc_encode_fw, qc_encode_bw = Layers.rnn_encoder_block(concat_cq, self.dropout_keep_prob, "ec1", compose=False)
 
-            fc_1 = tf.contrib.layers.fully_connected(tf.concat([qc_encode_layer_1, qc_encode_layer_2], axis=2),
+            fc_1 = tf.contrib.layers.fully_connected(qc_encode_fw,
                                                      1,
                                                      weights_initializer=tf.truncated_normal_initializer(stddev=0.01),
                                                      activation_fn=None
                                                      )
 
-            fc_2 = tf.contrib.layers.fully_connected(tf.concat([qc_encode_layer_2, qc_encode_layer_3], axis=2),
+            fc_2 = tf.contrib.layers.fully_connected(qc_encode_bw,
                                                      1,
                                                      weights_initializer=tf.truncated_normal_initializer(stddev=0.01),
                                                      activation_fn=None
                                                      )
-            self.fc_1 = tf.unstack(fc_1, axis=-1)[0]
-            self.fc_2 = tf.unstack(fc_2, axis=-1)[0]
+            self.fc_1 = tf.squeeze(fc_1, axis=-1)
+            self.fc_2 = tf.squeeze(fc_2, axis=-1)
 
         with tf.variable_scope("loss"):
             cross_entropy_1 = \
@@ -95,3 +93,4 @@ class EncoderDecoderModel(Model):
 if __name__ == "__main__":
     formed_input = np.zeros((2, 50))
     EncoderDecoderModel(formed_input)
+

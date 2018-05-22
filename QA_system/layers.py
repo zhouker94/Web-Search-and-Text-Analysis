@@ -12,7 +12,7 @@ import tensorflow as tf
 class Layers:
 
     @staticmethod
-    def rnn_encoder_block(inputs, dropout_keep_prob, scope):
+    def rnn_encoder_block(inputs, dropout_keep_prob, scope, compose=True):
         with tf.variable_scope(scope):
             norm_layer = tf.contrib.layers.layer_norm(inputs)
             print(norm_layer.shape)
@@ -26,11 +26,11 @@ class Layers:
                                                             cell_bw=gru_cell_bw,
                                                             inputs=norm_layer,
                                                             dtype=tf.float32)
-            encode_out = tf.concat(encode_out, 2)
-            print(encode_out.shape)
-            encode_out = Layers.self_attention(encode_out)
+            if compose:
+                encode_out = tf.concat(encode_out, 2)
+                # shape [batch_size, word_length, encode_size]
+                encode_out = Layers.self_attention(encode_out)
 
-        # shape [batch_size, word_length, encode_size]
         return encode_out
 
     @staticmethod
@@ -54,6 +54,7 @@ class Layers:
         W_c = tf.layers.dense(encode_c, 128, use_bias=False)
         W_q = tf.layers.dense(encode_q, 128, use_bias=False)
         W_q_T = tf.transpose(W_q, [0, 2, 1])
-        similarity = tf.matmul(W_c, W_q_T)
+        simi_c_q = tf.matmul(W_c, W_q_T)
         # shape [Batch, c, q]
-        return similarity
+        return simi_c_q
+

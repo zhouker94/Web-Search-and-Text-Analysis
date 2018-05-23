@@ -51,8 +51,10 @@ def convert_word_to_embedding_index(word, voc):
 with tf.Session() as sess:
     saver = tf.train.Saver()
     writer = tf.summary.FileWriter('model/train', sess.graph)
-
+    
     sess.run(tf.global_variables_initializer())
+
+    # saver.restore(sess, 'model/rnn')
 
     global_step = 0
     

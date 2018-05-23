@@ -35,17 +35,18 @@ class Layers:
 
     @staticmethod
     def self_attention(encoder_output):
+        norm_layer = tf.contrib.layers.layer_norm(encoder_output)
         # (batch, words, ecode)
-        W_1 = tf.layers.dense(encoder_output, 128, use_bias=False)
-        W_2 = tf.layers.dense(encoder_output, 128, use_bias=False)
+        W_1 = tf.layers.dense(norm_layer, 128, use_bias=False)
+        W_2 = tf.layers.dense(norm_layer, 128, use_bias=False)
 
         # (batch, word, word)
         W_1_2 = tf.matmul(W_1, tf.transpose(W_2, [0, 2, 1]))
-        return tf.matmul(tf.nn.softmax(W_1_2), encoder_output)
+        return tf.matmul(tf.nn.softmax(W_1_2), norm_layer)
 
     @staticmethod
     def dropout_wrapped_gru_cell(in_keep_prob):
-        gru_cell = tf.contrib.rnn.GRUCell(num_units=64, activation=tf.nn.sigmoid)
+        gru_cell = tf.contrib.rnn.GRUCell(num_units=64, activation=tf.nn.relu)
         rnn_layer = tf.contrib.rnn.DropoutWrapper(gru_cell, input_keep_prob=in_keep_prob)
         return rnn_layer
 

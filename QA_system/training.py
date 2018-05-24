@@ -1,7 +1,5 @@
 # coding: utf-8
 
-# In[1]:
-
 import tensorflow as tf
 import numpy as np
 import pickle
@@ -10,12 +8,12 @@ import constants as const
 import random
 from sklearn.utils import shuffle
 
+
 with open("/mnt/training_data.pickle", "rb") as input_file:
     # training data is list of dictionary
     training_data = pickle.load(input_file)
 
 emb_mat = np.load("/mnt/word_embedding_matrix.npy")
-
 rm = model.RnnModel(emb_mat)
 
 with open("/mnt/vocabulary.pickle", "rb") as input_file:
@@ -38,11 +36,11 @@ with tf.Session() as sess:
     saver = tf.train.Saver()
     writer = tf.summary.FileWriter('model/train', sess.graph)
 
-    # sess.run(tf.global_variables_initializer())
+    sess.run(tf.global_variables_initializer())
 
-    saver.restore(sess, 'model/rnn')
+    # saver.restore(sess, 'model/rnn')
 
-    global_step = 591
+    global_step = 0
     np.random.shuffle(training_data)
 
     for epoch in range(20):

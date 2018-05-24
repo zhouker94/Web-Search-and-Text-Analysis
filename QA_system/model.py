@@ -52,18 +52,15 @@ class RnnModel(Model):
             co_attention = Layers.coattention(encode_c, encode_q)
 
         with tf.variable_scope("qc_decode_block"):
-            decode_c = Layers.rnn_block(co_attention, self.dropout_keep_prob, "decode_c")
-            qc_encode_fw, qc_encode_bw = Layers.rnn_block(decode_c, self.dropout_keep_prob, "decompose",
-                                                          compose=False)
+            decode_qc = Layers.rnn_block(co_attention, self.dropout_keep_prob, "decode_qc")
 
-            print(qc_encode_bw.shape, qc_encode_fw.shape)
-            fc_1 = tf.contrib.layers.fully_connected(qc_encode_fw,
+            fc_1 = tf.contrib.layers.fully_connected(decode_qc,
                                                      1,
                                                      weights_initializer=tf.truncated_normal_initializer(stddev=0.01),
                                                      activation_fn=tf.nn.relu
                                                      )
 
-            fc_2 = tf.contrib.layers.fully_connected(qc_encode_bw,
+            fc_2 = tf.contrib.layers.fully_connected(decode_qc,
                                                      1,
                                                      weights_initializer=tf.truncated_normal_initializer(stddev=0.01),
                                                      activation_fn=tf.nn.relu

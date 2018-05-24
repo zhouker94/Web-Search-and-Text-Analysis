@@ -25,7 +25,7 @@ class Layers:
                                                             inputs=norm_layer,
                                                             dtype=tf.float32)
             if compose:
-                encode_out = tf.concat(encode_out, 2)
+                encode_out = tf.concat(list(encode_out), axis=2)
                 # shape [batch_size, word_length, encode_size]
                 # encode_out = Layers.self_attention(encode_out)
 

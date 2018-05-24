@@ -11,10 +11,9 @@ import tensorflow as tf
 
 class Layers:
     @staticmethod
-    def rnn_block(inputs, dropout_keep_prob, scope, compose=True, is_decode=False):
+    def rnn_block(inputs, dropout_keep_prob, scope, compose=True):
         with tf.variable_scope(scope):
             norm_layer = tf.contrib.layers.layer_norm(inputs)
-            print(norm_layer.shape)
 
             gru_cell_fw = tf.nn.rnn_cell.MultiRNNCell([Layers.dropout_wrapped_gru_cell(dropout_keep_prob)
                                                        for _ in range(2)])
@@ -30,10 +29,7 @@ class Layers:
                 # shape [batch_size, word_length, encode_size]
                 encode_out = Layers.self_attention(encode_out)
 
-            if is_decode:
-                return tf.concat(h, 2)
-            else:
-                return encode_out
+            return encode_out
 
     @staticmethod
     def self_attention(encoder_output):

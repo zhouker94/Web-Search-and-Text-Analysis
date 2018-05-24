@@ -50,10 +50,9 @@ class RnnModel(Model):
 
         with tf.variable_scope("question_context_coattention"):
             co_attention = Layers.coattention(encode_c, encode_q)
-            C_D = tf.matmul(co_attention, encode_q)
 
         with tf.variable_scope("qc_decode_block"):
-            decode_c = Layers.rnn_block(C_D, self.dropout_keep_prob, "decode_c")
+            decode_c = Layers.rnn_block(co_attention, self.dropout_keep_prob, "decode_c")
             qc_encode_fw, qc_encode_bw = Layers.rnn_block(decode_c, self.dropout_keep_prob, "decompose",
                                                           compose=False)
 
@@ -61,13 +60,13 @@ class RnnModel(Model):
             fc_1 = tf.contrib.layers.fully_connected(qc_encode_fw,
                                                      1,
                                                      weights_initializer=tf.truncated_normal_initializer(stddev=0.01),
-                                                     activation_fn=tf.nn.sigmoid
+                                                     activation_fn=tf.nn.relu
                                                      )
 
             fc_2 = tf.contrib.layers.fully_connected(qc_encode_bw,
                                                      1,
                                                      weights_initializer=tf.truncated_normal_initializer(stddev=0.01),
-                                                     activation_fn=tf.nn.sigmoid
+                                                     activation_fn=tf.nn.relu
                                                      )
             print(fc_1.shape, fc_2.shape)
             self.fc_1 = tf.squeeze(fc_1, axis=-1)

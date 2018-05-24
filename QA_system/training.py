@@ -10,15 +10,15 @@ import constants as const
 import random
 from sklearn.utils import shuffle
 
-with open("training_data.pickle", "rb") as input_file:
+with open("/mnt/training_data.pickle", "rb") as input_file:
     # training data is list of dictionary
     training_data = pickle.load(input_file)
 
-emb_mat = np.load("word_embedding_matrix.npy")
+emb_mat = np.load("/mnt/word_embedding_matrix.npy")
 
 rm = model.RnnModel(emb_mat)
 
-with open("vocabulary.pickle", "rb") as input_file:
+with open("/mnt/vocabulary.pickle", "rb") as input_file:
     voc = pickle.load(input_file)
 
 
@@ -38,18 +38,19 @@ with tf.Session() as sess:
     saver = tf.train.Saver()
     writer = tf.summary.FileWriter('model/train', sess.graph)
 
-    sess.run(tf.global_variables_initializer())
+    # sess.run(tf.global_variables_initializer())
 
-    # saver.restore(sess, 'model/rnn')
+    saver.restore(sess, 'model/rnn')
 
-    global_step = 0
+    global_step = 591
+    np.random.shuffle(training_data)
 
     for epoch in range(20):
-        np.random.shuffle(training_data)
         batch_i = 0
         while batch_i < len(training_data):
             start = batch_i
-            end = batch_i + const.BATCH_SIZE
+            end = start + const.BATCH_SIZE
+            
             q_list = []
             c_list = []
             s_list = []
@@ -81,13 +82,14 @@ with tf.Session() as sess:
                 i.extend([0] * (max_e - len(i)))
             batch_e = np.asarray(e_list)
 
+            print(batch_q.shape, batch_e.shape, batch_c.shape, batch_s.shape)
             _, loss, summaries = sess.run([rm.opm, rm.loss, rm.merged], feed_dict={rm.context_input: batch_c,
                                                                                    rm.question_input: batch_q,
                                                                                    rm.label_start: batch_s,
                                                                                    rm.label_end: batch_e,
                                                                                    rm.dropout_keep_prob: 0.8
                                                                                    })
-
+            
             writer.add_summary(summaries, global_step)
 
             print("Epoch:", epoch, "loss:", loss)

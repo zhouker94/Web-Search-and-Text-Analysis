@@ -27,7 +27,7 @@ class Layers:
             if compose:
                 encode_out = tf.concat(encode_out, 2)
                 # shape [batch_size, word_length, encode_size]
-                encode_out = Layers.self_attention(encode_out)
+                # encode_out = Layers.self_attention(encode_out)
 
             return encode_out
 
@@ -51,13 +51,14 @@ class Layers:
     @staticmethod
     def coattention(encode_c, encode_q):
         variation_q = tf.transpose(encode_q, [0, 2, 1])
+        # [batch, c length, q length]
         L = tf.matmul(encode_c, variation_q)
         L_t = tf.transpose(L, [0, 2, 1])
         # normalize with respect to question
         a_q = tf.map_fn(lambda x: tf.nn.softmax(x), L_t, dtype=tf.float32)
         # normalize with respect to context
         a_c = tf.map_fn(lambda x: tf.nn.softmax(x), L, dtype=tf.float32)
-        # summaries with respect to question, (batch_size, question+1, hidden_size)
+        # summaries with respect to question, (batch_size, question, hidden_size)
         c_q = tf.matmul(a_q, encode_c)
         c_q_emb = tf.concat((variation_q, tf.transpose(c_q, [0, 2, 1])), 1)
         # summaries of previous attention with respect to context

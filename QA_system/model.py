@@ -17,12 +17,8 @@ class Model(object):
             self.context_input = tf.placeholder(tf.int32, shape=[None, None], name="context_input")
             self.question_input = tf.placeholder(tf.int32, shape=[None, None], name="question_input")
 
-            self.label_start = tf.placeholder(tf.float32,
-                                              [None, None],
-                                              "start_label")
-            self.label_end = tf.placeholder(tf.float32,
-                                            [None, None],
-                                            "end_label")
+            self.label_start = tf.placeholder(tf.float32, [None, None], "start_label")
+            self.label_end = tf.placeholder(tf.float32, [None, None], "end_label")
 
             self.dropout_keep_prob = tf.placeholder(dtype=tf.float32, shape=[], name='dropout_keep_prob')
 
@@ -64,13 +60,13 @@ class EncoderDecoderModel(Model):
             fc_1 = tf.contrib.layers.fully_connected(qc_encode_fw,
                                                      1,
                                                      weights_initializer=tf.truncated_normal_initializer(stddev=0.01),
-                                                     activation_fn=tf.nn.relu
+                                                     activation_fn=tf.nn.sigmoid
                                                      )
 
             fc_2 = tf.contrib.layers.fully_connected(qc_encode_bw,
                                                      1,
                                                      weights_initializer=tf.truncated_normal_initializer(stddev=0.01),
-                                                     activation_fn=tf.nn.relu
+                                                     activation_fn=tf.nn.sigmoid
                                                      )
             self.fc_1 = tf.squeeze(fc_1, axis=-1)
             self.fc_2 = tf.squeeze(fc_2, axis=-1)
@@ -87,7 +83,7 @@ class EncoderDecoderModel(Model):
             tf.summary.scalar("training_Loss", self.loss)
 
             with tf.name_scope('adam_optimizer'):
-                self.opm = tf.train.GradientDescentOptimizer(1e-2).minimize(self.loss, name="optimizer")
+                self.opm = tf.train.AdamOptimizer(1e-3).minimize(self.loss, name="optimizer")
 
 
 if __name__ == "__main__":

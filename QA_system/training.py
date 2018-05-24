@@ -7,6 +7,7 @@ import numpy as np
 import pickle
 import model
 import constants as const
+import random
 
 # In[2]:
 
@@ -43,7 +44,7 @@ def convert_word_to_embedding_index(word, voc):
     if word in voc:
         return voc[word]
     else:
-        return 0
+        return random.randint(0, len(voc) - 1) 
 
 
 # In[ ]:
@@ -52,13 +53,14 @@ with tf.Session() as sess:
     saver = tf.train.Saver()
     writer = tf.summary.FileWriter('model/train', sess.graph)
     
-    sess.run(tf.global_variables_initializer())
+    # sess.run(tf.global_variables_initializer())
 
-    # saver.restore(sess, 'model/rnn')
+    saver.restore(sess, 'model/rnn')
 
-    global_step = 0
+    global_step = 325
     
-    for epoch in range(5):
+    for epoch in range(20):
+        
         batch_i = 0
         while batch_i < len(training_data):
             start = batch_i
@@ -95,11 +97,11 @@ with tf.Session() as sess:
             batch_e = np.asarray(e_list)
 
             _, loss, summaries = sess.run([edm.opm, edm.loss, edm.merged], feed_dict={edm.context_input: batch_c,
-                                                                                      edm.question_input: batch_q,
-                                                                                      edm.label_start: batch_s,
-                                                                                      edm.label_end: batch_e,
-                                                                                      edm.dropout_keep_prob: 0.5
-                                                                                      })
+                                                              edm.question_input: batch_q,
+                                                              edm.label_start: batch_s,
+                                                              edm.label_end: batch_e,
+                                                              edm.dropout_keep_prob: 0.8
+                                                              })
 
             writer.add_summary(summaries, global_step)
 
@@ -107,6 +109,6 @@ with tf.Session() as sess:
             batch_i += const.BATCH_SIZE
             global_step += 1
 
-    save_path = saver.save(sess, "model/rnn")
-    print("Model saved in path: %s" % save_path)
+        save_path = saver.save(sess, "model/rnn")
+        print("Model saved in path: %s" % save_path)
 

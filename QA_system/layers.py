@@ -18,9 +18,9 @@ class Layers:
             print(norm_layer.shape)
 
             gru_cell_fw = tf.nn.rnn_cell.MultiRNNCell([Layers.dropout_wrapped_gru_cell(dropout_keep_prob)
-                                                       for _ in range(3)])
+                                                       for _ in range(2)])
             gru_cell_bw = tf.nn.rnn_cell.MultiRNNCell([Layers.dropout_wrapped_gru_cell(dropout_keep_prob)
-                                                       for _ in range(3)])
+                                                       for _ in range(2)])
 
             encode_out, _ = tf.nn.bidirectional_dynamic_rnn(cell_fw=gru_cell_fw,
                                                             cell_bw=gru_cell_bw,
@@ -58,4 +58,3 @@ class Layers:
         simi_c_q = tf.matmul(W_c, W_q_T)
         # shape [Batch, c, q]
         return simi_c_q
-

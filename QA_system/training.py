@@ -8,32 +8,19 @@ import pickle
 import model
 import constants as const
 import random
-
-# In[2]:
+from sklearn.utils import shuffle
 
 with open("training_data.pickle", "rb") as input_file:
     # training data is list of dictionary
     training_data = pickle.load(input_file)
 
-# In[3]:
-
-from sklearn.utils import shuffle
-
-training_data = shuffle(training_data, random_state=0)
-
-# In[4]:
-
 emb_mat = np.load("word_embedding_matrix.npy")
 
-edm = model.EncoderDecoderModel(emb_mat)
-
-# In[5]:
+rm = model.RnnModel(emb_mat)
 
 with open("vocabulary.pickle", "rb") as input_file:
     voc = pickle.load(input_file)
 
-
-# In[6]:
 
 def find_max_length(lst):
     length = max((len(e) for e in lst))
@@ -44,23 +31,21 @@ def convert_word_to_embedding_index(word, voc):
     if word in voc:
         return voc[word]
     else:
-        return random.randint(0, len(voc) - 1) 
+        return random.randint(0, len(voc) - 1)
 
-
-# In[ ]:
 
 with tf.Session() as sess:
     saver = tf.train.Saver()
     writer = tf.summary.FileWriter('model/train', sess.graph)
-    
-    # sess.run(tf.global_variables_initializer())
 
-    saver.restore(sess, 'model/rnn')
+    sess.run(tf.global_variables_initializer())
 
-    global_step = 325
-    
+    # saver.restore(sess, 'model/rnn')
+
+    global_step = 0
+
     for epoch in range(20):
-        
+        np.random.shuffle(training_data)
         batch_i = 0
         while batch_i < len(training_data):
             start = batch_i
@@ -96,12 +81,12 @@ with tf.Session() as sess:
                 i.extend([0] * (max_e - len(i)))
             batch_e = np.asarray(e_list)
 
-            _, loss, summaries = sess.run([edm.opm, edm.loss, edm.merged], feed_dict={edm.context_input: batch_c,
-                                                              edm.question_input: batch_q,
-                                                              edm.label_start: batch_s,
-                                                              edm.label_end: batch_e,
-                                                              edm.dropout_keep_prob: 0.8
-                                                              })
+            _, loss, summaries = sess.run([rm.opm, rm.loss, rm.merged], feed_dict={rm.context_input: batch_c,
+                                                                                   rm.question_input: batch_q,
+                                                                                   rm.label_start: batch_s,
+                                                                                   rm.label_end: batch_e,
+                                                                                   rm.dropout_keep_prob: 0.8
+                                                                                   })
 
             writer.add_summary(summaries, global_step)
 
@@ -111,4 +96,3 @@ with tf.Session() as sess:
 
         save_path = saver.save(sess, "model/rnn")
         print("Model saved in path: %s" % save_path)
-

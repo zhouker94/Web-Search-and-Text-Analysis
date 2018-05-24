@@ -37,25 +37,24 @@ class Model(object):
         pass
 
 
-class EncoderDecoderModel(Model):
+class RnnModel(Model):
     def __init__(self, emb_mat):
         super().__init__(emb_mat)
 
     def _build_model(self):
         with tf.variable_scope("context_encoder_block"):
-            encode_c = Layers.rnn_encoder_block(self.c, self.dropout_keep_prob, "ec")
+            encode_c = Layers.rnn_block(self.c, self.dropout_keep_prob, "ec")
 
         with tf.variable_scope("question_encoder_block"):
-            encode_q = Layers.rnn_encoder_block(self.q, self.dropout_keep_prob, "eq")
+            encode_q = Layers.rnn_block(self.q, self.dropout_keep_prob, "eq")
 
-        with tf.variable_scope("question_context_attention"):
-            similarity = Layers.similarity(encode_c, encode_q)
-            print('similarity:', similarity)
-            norm_similarity = tf.nn.softmax(similarity, axis=-1)
-            concat_cq = tf.matmul(norm_similarity, encode_q)
+        with tf.variable_scope("question_context_coattention"):
+            co_attention = Layers.coattention(encode_c, encode_q)
 
-        with tf.variable_scope("qc_encoder_block"):
-            qc_encode_fw, qc_encode_bw = Layers.rnn_encoder_block(concat_cq, self.dropout_keep_prob, "ec1", compose=False)
+        with tf.variable_scope("qc_decode_block"):
+            decode_h = Layers.rnn_block(co_attention, self.dropout_keep_prob, "decode", is_decode=True)
+            qc_encode_fw, qc_encode_bw = Layers.rnn_block(decode_h, self.dropout_keep_prob, "decompose",
+                                                          compose=False)
 
             fc_1 = tf.contrib.layers.fully_connected(qc_encode_fw,
                                                      1,
@@ -88,5 +87,4 @@ class EncoderDecoderModel(Model):
 
 if __name__ == "__main__":
     formed_input = np.zeros((2, 50))
-    EncoderDecoderModel(formed_input)
-
+    RnnModel(formed_input)

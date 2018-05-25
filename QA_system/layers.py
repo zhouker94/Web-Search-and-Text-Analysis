@@ -11,6 +11,16 @@ import tensorflow as tf
 
 class Layers:
     @staticmethod
+    def cnn_block(inputs, dropout_keep_prob, scope, compose=True):
+        with tf.variable_scope(scope):
+            norm_layer = tf.contrib.layers.layer_norm(inputs)
+            print(norm_layer.shape)
+            conv_layer_1 = Layers.conv1d_layer(norm_layer)
+            conv_layer_2 = Layers.conv1d_layer(conv_layer_1)
+            print("heree!!!!!", conv_layer_2.shape)
+        return conv_layer_2
+
+    @staticmethod
     def rnn_block(inputs, dropout_keep_prob, scope, compose=True):
         with tf.variable_scope(scope):
             norm_layer = tf.contrib.layers.layer_norm(inputs)
@@ -67,3 +77,13 @@ class Layers:
         co_att = tf.concat((encode_c, tf.transpose(c_d, [0, 2, 1])), 2)
         # shape [Batch, c, q]
         return co_att
+
+    @staticmethod
+    def conv1d_layer(inputs):
+        weight = tf.Variable(tf.truncated_normal(
+            [6, int(inputs.shape[2]), 64]))
+        bias = tf.Variable(tf.zeros(64))
+        conv_layer = tf.nn.conv1d(inputs, weight, stride=1, padding='SAME')
+        conv_layer = tf.nn.bias_add(conv_layer, bias)
+        conv_layer = tf.nn.relu(conv_layer)
+        return conv_layer

@@ -1,4 +1,4 @@
-import model as model
+import models as model
 import tensorflow as tf
 import numpy as np
 import pickle

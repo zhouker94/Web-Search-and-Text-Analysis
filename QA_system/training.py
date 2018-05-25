@@ -3,18 +3,16 @@
 import tensorflow as tf
 import numpy as np
 import pickle
-import model
+import models
 import constants as const
 import random
-from sklearn.utils import shuffle
-
 
 with open("/mnt/training_data.pickle", "rb") as input_file:
     # training data is list of dictionary
     training_data = pickle.load(input_file)
 
 emb_mat = np.load("/mnt/word_embedding_matrix.npy")
-rm = model.RnnModel(emb_mat)
+cm = models.CnnModel(emb_mat)
 
 with open("/mnt/vocabulary.pickle", "rb") as input_file:
     voc = pickle.load(input_file)
@@ -38,8 +36,6 @@ with tf.Session() as sess:
 
     sess.run(tf.global_variables_initializer())
 
-    # saver.restore(sess, 'model/rnn')
-
     global_step = 0
     np.random.shuffle(training_data)
 
@@ -47,13 +43,14 @@ with tf.Session() as sess:
         batch_i = 0
         while batch_i < len(training_data):
             start = batch_i
-            end = start + const.BATCH_SIZE
-            
+            end = batch_i + const.BATCH_SIZE
+
+            batch_data = training_data[start: end]
             q_list = []
             c_list = []
             s_list = []
             e_list = []
-            for ins in training_data[start: end]:
+            for ins in batch_data:
                 q_list.append(list(map(lambda x: convert_word_to_embedding_index(x, voc), ins['question'])))
                 c_list.append(list(map(lambda x: convert_word_to_embedding_index(x, voc), ins['context'])))
                 s_list.append(ins['start'])
@@ -81,18 +78,18 @@ with tf.Session() as sess:
             batch_e = np.asarray(e_list)
 
             print(batch_q.shape, batch_e.shape, batch_c.shape, batch_s.shape)
-            _, loss, summaries = sess.run([rm.opm, rm.loss, rm.merged], feed_dict={rm.context_input: batch_c,
-                                                                                   rm.question_input: batch_q,
-                                                                                   rm.label_start: batch_s,
-                                                                                   rm.label_end: batch_e,
-                                                                                   rm.dropout_keep_prob: 0.8
+            _, loss, summaries = sess.run([cm.opm, cm.loss, cm.merged], feed_dict={cm.context_input: batch_c,
+                                                                                   cm.question_input: batch_q,
+                                                                                   cm.label_start: batch_s,
+                                                                                   cm.label_end: batch_e,
+                                                                                   cm.dropout_keep_prob: 0.8
                                                                                    })
-            
+
             writer.add_summary(summaries, global_step)
 
             print("Epoch:", epoch, "loss:", loss)
             batch_i += const.BATCH_SIZE
             global_step += 1
 
-        save_path = saver.save(sess, "model/rnn")
+        save_path = saver.save(sess, "model/cnn")
         print("Model saved in path: %s" % save_path)

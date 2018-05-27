@@ -49,72 +49,30 @@ class RnnModel(Model):
             encode_q = Layers.rnn_block(self.q, self.dropout_keep_prob, "eq")
 
         with tf.variable_scope("question_context_coattention"):
-            co_attention = Layers.coattention(encode_c, encode_q)
+            c_q_coattention = Layers.coattention(encode_c, encode_q)
+            q_c_coattention = Layers.coattention(encode_q, encode_c)
+            c_attention = Layers.coattention(c_q_coattention, q_c_coattention)
 
         with tf.variable_scope("qc_decode_block"):
-            decode_qc = Layers.rnn_block(co_attention, self.dropout_keep_prob, "decode_qc")
+            decode_qc_1 = Layers.rnn_block(c_attention, self.dropout_keep_prob, "decode_qc_1")
+            decode_qc_2 = Layers.rnn_block(c_attention, self.dropout_keep_prob, "decode_qc_2")
 
-            fc_1 = tf.contrib.layers.fully_connected(decode_qc,
+            fc_1 = tf.contrib.layers.fully_connected(tf.concat([decode_qc_1, decode_qc_2], 2),
                                                      1,
-                                                     weights_initializer=tf.truncated_normal_initializer(stddev=0.01),
+                                                     weights_initializer=tf.truncated_normal_initializer(stddev=0.001),
                                                      activation_fn=tf.nn.relu
                                                      )
 
-            fc_2 = tf.contrib.layers.fully_connected(decode_qc,
+            fc_2 = tf.contrib.layers.fully_connected(tf.concat([decode_qc_1, decode_qc_2], 2),
                                                      1,
-                                                     weights_initializer=tf.truncated_normal_initializer(stddev=0.01),
-                                                     activation_fn=tf.nn.relu
-                                                     )
-            print(fc_1.shape, fc_2.shape)
-            self.fc_1 = tf.squeeze(fc_1, axis=-1)
-            self.fc_2 = tf.squeeze(fc_2, axis=-1)
-
-        with tf.variable_scope("loss"):
-            cross_entropy_1 = \
-                tf.nn.softmax_cross_entropy_with_logits(labels=self.label_start, logits=self.fc_1)
-            cross_entropy_2 = \
-                tf.nn.softmax_cross_entropy_with_logits(labels=self.label_end, logits=self.fc_2)
-            tf.summary.histogram('cross_entropy_1', cross_entropy_1)
-            tf.summary.histogram('cross_entropy_2', cross_entropy_2)
-
-            self.loss = tf.reduce_mean(tf.add(cross_entropy_1, cross_entropy_2))
-            tf.summary.scalar("training_Loss", self.loss)
-
-            with tf.name_scope('adam_optimizer'):
-                self.opm = tf.train.AdamOptimizer(1e-3).minimize(self.loss, name="optimizer")
-
-
-class CnnModel(Model):
-    def __init__(self, emb_mat):
-        super().__init__(emb_mat)
-
-    def _build_model(self):
-        with tf.variable_scope("context_encoder_block"):
-            encode_c = Layers.cnn_block(self.c, self.dropout_keep_prob, "ec")
-
-        with tf.variable_scope("question_encoder_block"):
-            encode_q = Layers.cnn_block(self.q, self.dropout_keep_prob, "eq")
-
-        with tf.variable_scope("question_context_coattention"):
-            co_attention = Layers.coattention(encode_c, encode_q)
-
-        with tf.variable_scope("qc_decode_block"):
-            decode_qc = Layers.cnn_block(co_attention, self.dropout_keep_prob, "decode_qc")
-
-            fc_1 = tf.contrib.layers.fully_connected(decode_qc,
-                                                     1,
-                                                     weights_initializer=tf.truncated_normal_initializer(stddev=0.01),
+                                                     weights_initializer=tf.truncated_normal_initializer(stddev=0.001),
                                                      activation_fn=tf.nn.relu
                                                      )
 
-            fc_2 = tf.contrib.layers.fully_connected(decode_qc,
-                                                     1,
-                                                     weights_initializer=tf.truncated_normal_initializer(stddev=0.01),
-                                                     activation_fn=tf.nn.relu
-                                                     )
-            print(fc_1.shape, fc_2.shape)
             self.output_layer_1 = tf.squeeze(fc_1, axis=-1)
             self.output_layer_2 = tf.squeeze(fc_2, axis=-1)
+            tf.summary.histogram('logits_1', self.output_layer_1)
+            tf.summary.histogram('logits_2', self.output_layer_2)
 
         with tf.variable_scope("loss"):
             cross_entropy_1 = \
@@ -131,6 +89,54 @@ class CnnModel(Model):
                 self.opm = tf.train.AdamOptimizer(1e-3).minimize(self.loss, name="optimizer")
 
 
+"""
+class CnnModel(Model):
+    def __init__(self, emb_mat):
+        super().__init__(emb_mat)
+
+    def _build_model(self):
+        with tf.variable_scope("context_encoder_block"):
+            encode_c = Layers.cnn_block(self.c, self.dropout_keep_prob, "ec")
+
+        with tf.variable_scope("question_encoder_block"):
+            encode_q = Layers.cnn_block(self.q, self.dropout_keep_prob, "eq")
+
+        # with tf.variable_scope("question_context_coattention"):
+
+
+        with tf.variable_scope("qc_decode_block"):
+            decode_qc_1 = Layers.cnn_block(c_attention, self.dropout_keep_prob, "decode_qc_1")
+            decode_qc_2 = Layers.cnn_block(c_attention, self.dropout_keep_prob, "decode_qc_2")
+            
+            fc_1 = tf.contrib.layers.fully_connected(tf.concat([decode_qc_1, decode_qc_2], 2),
+                                                     1,
+                                                     weights_initializer=tf.truncated_normal_initializer(stddev=0.001),
+                                                     activation_fn=tf.nn.relu
+                                                     )
+
+            fc_2 = tf.contrib.layers.fully_connected(tf.concat([decode_qc_1, decode_qc_2], 2),
+                                                     1,
+                                                     weights_initializer=tf.truncated_normal_initializer(stddev=0.001),
+                                                     activation_fn=tf.nn.relu
+                                                     )
+            self.output_layer_1 = tf.squeeze(fc_1, axis=-1)
+            self.output_layer_2 = tf.squeeze(fc_2, axis=-1)
+
+        with tf.variable_scope("loss"):
+            cross_entropy_1 = \
+                tf.nn.softmax_cross_entropy_with_logits(labels=self.label_start, logits=self.output_layer_1)
+            cross_entropy_2 = \
+                tf.nn.softmax_cross_entropy_with_logits(labels=self.label_end, logits=self.output_layer_2)
+            tf.summary.histogram('cross_entropy_1', cross_entropy_1)
+            tf.summary.histogram('cross_entropy_2', cross_entropy_2)
+
+            self.loss = tf.reduce_mean(tf.add(cross_entropy_1, cross_entropy_2))
+            tf.summary.scalar("training_Loss", self.loss)
+
+            with tf.name_scope('adam_optimizer'):
+                self.opm = tf.train.AdamOptimizer(1e-3).minimize(self.loss, name="optimizer")
+"""
+
 if __name__ == "__main__":
     formed_input = np.zeros((2, 50))
-    CnnModel(formed_input)
+    RnnModel(formed_input)

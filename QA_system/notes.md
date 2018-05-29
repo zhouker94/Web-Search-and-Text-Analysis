@@ -1,4 +1,4 @@
-#Question Answering
+# Question Answering
 
 - Def: automatically determining the answer (set) for a natural language questing
 

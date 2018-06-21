@@ -6,7 +6,7 @@ In this project, I build an end-to-end QA system, which takes the plain text of 
 
 ## DEEP LEARNING MODEL 
 
-The model architecture is similar to [2][3] [4]. The figure shows the architecture of the neural network, which is implemented in Python using Tensorflow.
+The model architecture is similar to [2] [3] [4]. The figure shows the architecture of the neural network, which is implemented in Python using Tensorflow.
 
 ![nn_architecture](res/nn_architecture.jpg)
 

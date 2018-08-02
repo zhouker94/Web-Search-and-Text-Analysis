@@ -4,147 +4,154 @@ import tensorflow as tf
 import numpy as np
 import pickle
 import models
-import constants as const
+import config
 import random
 
 
-with open("/mnt/training_data.pickle", "rb") as input_file:
-    # training data is list of dictionary
-    training_data = pickle.load(input_file)
+def load_dataset():
+    with open(config.DATA_PATH + "trainset_context.pickle", "rb") as f:
+        # training data is list of dictionary
+        train_c = pickle.load(f)
 
-emb_mat = np.load("/mnt/new_word_embedding_matrix.npy")
-rm = models.RnnModel(emb_mat)
+    with open(config.DATA_PATH + "trainset_question.pickle", "rb") as f:
+        # training data is list of dictionary
+        train_q = pickle.load(f)
 
-with open("/mnt/new_vocabulary.pickle", "rb") as input_file:
-    voc = pickle.load(input_file)
+    with open(config.DATA_PATH + "devset_context.pickle", "rb") as f:
+        # training data is list of dictionary
+        dev_c = pickle.load(f)
 
-with open("devel_data.pickle", "rb") as input_file:
-    # training data is list of dictionary
-    devel_data = pickle.load(input_file)
+    with open(config.DATA_PATH + "devset_question.pickle", "rb") as f:
+        # training data is list of dictionary
+        dev_q = pickle.load(f)
+
+    emb_mat = np.load(config.DATA_PATH + "word_embedding_matrix.npy")
+
+    with open(config.DATA_PATH + "vocabulary.pickle", "rb") as f:
+        voc = pickle.load(f)
+
+    return train_c, train_q, dev_c, dev_q, emb_mat, voc
 
 
-# this is for padding list of list words to batch matrix
-def find_max_length(lst):
-    length = max((len(e) for e in lst))
-    return length
+def text_to_index(raw_text, vocb):
+    word_seq = tf.keras.preprocessing.text.text_to_word_sequence(raw_text)
+
+    index_list = []
+    for w in word_seq:
+        if w in vocb:
+            index_list.append(vocb[w])
+        else:
+            index_list.append(vocb[config.TOKEN_OF_OUT_OF_VOCABULARY])
+
+    return index_list
 
 
-def convert_word_to_embedding_index(word, voc):
-    if word in voc:
-        return voc[word]
-    else:
-        return random.randint(0, len(voc) - 1)
+def generate_batch(batch_sample):
+    batch_q, batch_c, batch_s, batch_e = [], [], [], []
+    for q in batch_sample:
+        if not q["is_impossible"]:
+            batch_q.append(text_to_index(q['question'], voc))
+            batch_c.append(text_to_index(train_c[q['context_id']], voc))
+            last_answer = q['answers'][0]
+            batch_s.append(last_answer['answer_start'])
+            batch_e.append(last_answer['answer_start'] +
+                           len(last_answer['text'].split(' ')))
 
-    
-with tf.Session() as sess:
-    saver = tf.train.Saver()
-    writer = tf.summary.FileWriter('model/train', sess.graph)
+    batch_q = keras.preprocessing.sequence.pad_sequences(batch_q,
+                                                         value=voc[
+                                                             "<PAD>"],
+                                                         padding='post',
+                                                         maxlen=16)
+    batch_c = keras.preprocessing.sequence.pad_sequences(batch_c,
+                                                         value=voc[
+                                                             "<PAD>"],
+                                                         padding='post',
+                                                         maxlen=256)
+    return batch_q, batch_c, batch_s, batch_e
 
-    sess.run(tf.global_variables_initializer())
-    # saver.restore(sess, "model/rnn")
-    global_step = 0
 
-    for epoch in range(20):
-        batch_i = 0
-        np.random.shuffle(training_data)
-        while batch_i < len(training_data):
-            start = batch_i
-            end = batch_i + const.BATCH_SIZE
+def train(warm_start):
 
-            batch_data = training_data[start: end]
-            q_list = []
-            c_list = []
-            s_list = []
-            e_list = []
-            for ins in batch_data:
-                q_list.append(list(map(lambda x: convert_word_to_embedding_index(x, voc), ins['question'])))
-                c_list.append(list(map(lambda x: convert_word_to_embedding_index(x, voc), ins['context'])))
-                s_list.append(list(ins['start']))
-                e_list.append(list(ins['end']))
+    train_c, train_q, dev_c, dev_q, emb_mat, voc = load_dataset()
 
-            # padding to a matrix by '0'
-            max_q = find_max_length(q_list)
-            for i in q_list:
-                i.extend([0] * (max_q - len(i)))
-            batch_q = np.asarray(q_list)
+    with tf.Session() as sess:
 
-            max_c = find_max_length(c_list)
-            for i in c_list:
-                i.extend([0] * (max_c - len(i)))
-            batch_c = np.asarray(c_list)
+        rm = models.RnnModel(emb_mat)
+        saver = tf.train.Saver()
+        writer = tf.summary.FileWriter('model/train', sess.graph)
 
-            max_s = find_max_length(s_list)
-            for i in s_list:
-                i.extend([0] * (max_s - len(i)))
-            batch_s = np.asarray(s_list)
+        if warm_start:
+            ckpt = tf.train.get_checkpoint_state(config.CKP_PAHT)
+            if ckpt and ckpt.model_checkpoint_path:
+                saver.restore(sess, ckpt.model_checkpoint_path)
+            else:
+                print("Cannot restore model from {}".format(
+                    ckpt.model_checkpoint_path))
+                return
+        else:
+            sess.run(tf.global_variables_initializer())
 
-            max_e = find_max_length(e_list)
-            for i in e_list:
-                i.extend([0] * (max_e - len(i)))
-            batch_e = np.asarray(e_list)
+        global_step = 0
 
-            print(batch_q.shape, batch_e.shape, batch_c.shape, batch_s.shape)
-            _, loss, summaries = sess.run([rm.opm, rm.loss, rm.merged], feed_dict={rm.context_input: batch_c,
-                                                                                   rm.question_input: batch_q,
-                                                                                   rm.label_start: batch_s,
-                                                                                   rm.label_end: batch_e,
-                                                                                   rm.dropout_keep_prob: 0.8
-                                                                                   })
+        for epoch in range(config.TRANING_EPOCH):
 
-            # every 10 global steps, sampling a batch to evaluate loss from devel set
-            if not global_step % 10:
-                # random batch
-                dev_index = random.randint(0, len(devel_data) - 1)
-                dev_batch_data = devel_data[dev_index: dev_index + const.BATCH_SIZE]
-                
-                dev_q_list = []
-                dev_c_list = []
-                dev_s_list = []
-                dev_e_list = []
-                for ins in dev_batch_data:
-                    dev_q_list.append(list(map(lambda x: convert_word_to_embedding_index(x, voc), ins['question'])))
-                    dev_c_list.append(list(map(lambda x: convert_word_to_embedding_index(x, voc), ins['context'])))
-                    dev_s_list.append(list(ins['start']))
-                    dev_e_list.append(list(ins['end']))
+            batch_counter = 0
+            np.random.shuffle(train_q)
+            while batch_counter < len(train_q):
 
-                # padding to a matrix by '0'
-                dev_max_q = find_max_length(dev_q_list)
-                for i in dev_q_list:
-                    i.extend([0] * (dev_max_q - len(i)))
-                dev_batch_q = np.asarray(dev_q_list)
+                batch_sample = train_q[
+                    batch_counter: batch_counter + config.BATCH_SIZE]
 
-                dev_max_c = find_max_length(dev_c_list)
-                for i in dev_c_list:
-                    i.extend([0] * (dev_max_c - len(i)))
-                dev_batch_c = np.asarray(dev_c_list)
+                batch_q, batch_c, batch_s, batch_e = generate_batch(
+                    batch_sample)
 
-                dev_max_s = find_max_length(dev_s_list)
-                for i in dev_s_list:
-                    i.extend([0] * (dev_max_s - len(i)))
-                dev_batch_s = np.asarray(dev_s_list)
+                _, loss, summaries = sess.run([rm.opm, rm.loss, rm.merged],
+                                              feed_dict={rm.context_input: batch_c,
+                                                         rm.question_input: batch_q,
+                                                         rm.label_start: batch_s,
+                                                         rm.label_end: batch_e,
+                                                         rm.dropout_keep_prob: 0.8
+                                                         })
 
-                dev_max_e = find_max_length(dev_e_list)
-                for i in dev_e_list:
-                    i.extend([0] * (dev_max_e - len(i)))
-                dev_batch_e = np.asarray(dev_e_list)
-                
-                loss = sess.run(rm.loss, feed_dict={rm.context_input: dev_batch_c,
-                                          rm.question_input: dev_batch_q,
-                                          rm.label_start: dev_batch_s,
-                                          rm.label_end: dev_batch_e,
-                                          rm.dropout_keep_prob: 1
-                                          })
-                summary = tf.Summary()
-                summary_value = summary.value.add()
-                summary_value.simple_value = loss
-                summary_value.tag = "evaluate_loss"
-                writer.add_summary(summary, global_step)
-            
-            writer.add_summary(summaries, global_step)
+                # every 16 global steps, sampling a batch to evaluate loss from
+                # devel set
+                if not global_step % 16:
+                    # random batch
+                    dev_index = random.randint(0, len(dev_q) - 1)
+                    dev_batch_sample = dev_q[
+                        dev_index: dev_index + config.BATCH_SIZE]
 
-            print("Epoch:", epoch, "loss:", loss)
-            batch_i += const.BATCH_SIZE
-            global_step += 1
+                    dev_batch_q, dev_batch_c, dev_batch_s, dev_batch_e = generate_batch(
+                        dev_batch_sample)
 
-        save_path = saver.save(sess, "model/rnn")
-        print("Model saved in path: %s" % save_path)
+                    loss = sess.run(rm.loss, feed_dict={rm.context_input: dev_batch_c,
+                                                        rm.question_input: dev_batch_q,
+                                                        rm.label_start: dev_batch_s,
+                                                        rm.label_end: dev_batch_e,
+                                                        rm.dropout_keep_prob: 1
+                                                        })
+                    
+                    summary = tf.Summary()
+                    summary_value = summary.value.add()
+                    summary_value.simple_value = loss
+                    summary_value.tag = "evaluate_loss"
+                    writer.add_summary(summary, global_step)
+
+                writer.add_summary(summaries, global_step)
+
+                print(
+                    " --- Epoch: {}, batch: {}, loss: {} --- ".format(epoch, batch_i, loss))
+                batch_counter += config.BATCH_SIZE
+                global_step += 1
+
+            save_path = saver.save(sess, "model/rnn")
+            print("Model saved in path: {}".format(save_path))
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--start_mode', type=bool, default=False,
+                        help='Is warm start from existing checkpoint?')
+    parsed_args = parser.parse_args()
+
+    train(parsed_args.start_mode)

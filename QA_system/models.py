@@ -17,8 +17,8 @@ class Model(object):
             self.context_input = tf.placeholder(tf.int32, shape=[None, None], name="context_input")
             self.question_input = tf.placeholder(tf.int32, shape=[None, None], name="question_input")
 
-            self.label_start = tf.placeholder(tf.float32, [None, None], "start_label")
-            self.label_end = tf.placeholder(tf.float32, [None, None], "end_label")
+            self.label_start = tf.placeholder(tf.float32, [None], "start_label")
+            self.label_end = tf.placeholder(tf.float32, [None], "end_label")
 
             self.dropout_keep_prob = tf.placeholder(dtype=tf.float32, shape=[], name='dropout_keep_prob')
 
@@ -76,9 +76,10 @@ class RnnModel(Model):
 
         with tf.variable_scope("loss"):
             cross_entropy_1 = \
-                tf.nn.softmax_cross_entropy_with_logits(labels=self.label_start, logits=self.output_layer_1)
+                tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.output_layer_1, labels=self.label_start)
             cross_entropy_2 = \
-                tf.nn.softmax_cross_entropy_with_logits(labels=self.label_end, logits=self.output_layer_2)
+                tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.output_layer_2, labels=self.label_end)
+
             tf.summary.histogram('cross_entropy_1', cross_entropy_1)
             tf.summary.histogram('cross_entropy_2', cross_entropy_2)
 

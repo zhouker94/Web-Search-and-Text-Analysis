@@ -6,6 +6,8 @@ import pickle
 import models
 import config
 import random
+import argparse
+from tensorflow import keras
 
 
 def load_dataset():
@@ -46,27 +48,32 @@ def text_to_index(raw_text, vocb):
     return index_list
 
 
-def generate_batch(batch_sample):
+def generate_batch(batch_sample, voc, context):
     batch_q, batch_c, batch_s, batch_e = [], [], [], []
     for q in batch_sample:
         if not q["is_impossible"]:
             batch_q.append(text_to_index(q['question'], voc))
-            batch_c.append(text_to_index(train_c[q['context_id']], voc))
-            last_answer = q['answers'][0]
-            batch_s.append(last_answer['answer_start'])
-            batch_e.append(last_answer['answer_start'] +
-                           len(last_answer['text'].split(' ')))
+            batch_c.append(text_to_index(context[q['context_id']], voc))
+            
+            first_answer = q['answers'][0]
+            answer_start = len(tf.keras.preprocessing.text.text_to_word_sequence(first_answer['answer_start']))
+            answer_end =  answer_start + \
+                len(tf.keras.preprocessing.text.text_to_word_sequence(first_answer['text'])) - 1
+                
+            batch_s.append(answer_start)
+            batch_e.append(answer_end)
 
     batch_q = keras.preprocessing.sequence.pad_sequences(batch_q,
                                                          value=voc[
                                                              "<PAD>"],
                                                          padding='post',
                                                          maxlen=16)
+    
     batch_c = keras.preprocessing.sequence.pad_sequences(batch_c,
                                                          value=voc[
                                                              "<PAD>"],
-                                                         padding='post',
-                                                         maxlen=256)
+                                                         padding='post')
+
     return batch_q, batch_c, batch_s, batch_e
 
 
@@ -103,7 +110,7 @@ def train(warm_start):
                     batch_counter: batch_counter + config.BATCH_SIZE]
 
                 batch_q, batch_c, batch_s, batch_e = generate_batch(
-                    batch_sample)
+                    batch_sample, voc, train_c)
 
                 _, loss, summaries = sess.run([rm.opm, rm.loss, rm.merged],
                                               feed_dict={rm.context_input: batch_c,
@@ -122,7 +129,7 @@ def train(warm_start):
                         dev_index: dev_index + config.BATCH_SIZE]
 
                     dev_batch_q, dev_batch_c, dev_batch_s, dev_batch_e = generate_batch(
-                        dev_batch_sample)
+                        dev_batch_sample, voc, dev_c)
 
                     loss = sess.run(rm.loss, feed_dict={rm.context_input: dev_batch_c,
                                                         rm.question_input: dev_batch_q,
@@ -140,7 +147,7 @@ def train(warm_start):
                 writer.add_summary(summaries, global_step)
 
                 print(
-                    " --- Epoch: {}, batch: {}, loss: {} --- ".format(epoch, batch_i, loss))
+                    " --- Epoch: {}, batch: {}, loss: {} --- ".format(epoch, batch_counter, loss))
                 batch_counter += config.BATCH_SIZE
                 global_step += 1
 

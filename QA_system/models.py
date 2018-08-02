@@ -17,8 +17,8 @@ class Model(object):
             self.context_input = tf.placeholder(tf.int32, shape=[None, None], name="context_input")
             self.question_input = tf.placeholder(tf.int32, shape=[None, None], name="question_input")
 
-            self.label_start = tf.placeholder(tf.float32, [None], "start_label")
-            self.label_end = tf.placeholder(tf.float32, [None], "end_label")
+            self.label_start = tf.placeholder(tf.int32, [None], "start_label")
+            self.label_end = tf.placeholder(tf.int32, [None], "end_label")
 
             self.dropout_keep_prob = tf.placeholder(dtype=tf.float32, shape=[], name='dropout_keep_prob')
 

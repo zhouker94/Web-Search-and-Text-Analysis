@@ -3,10 +3,12 @@ from flask import request, jsonify
 import numpy as np
 import tensorflow as tf
 import config
+import helper
 
 
 app = Flask(__name__)
 model = None
+sess = None
 voc = None
 
 
@@ -51,8 +53,28 @@ def predict():
         if len(q_list) > 256 or len(q_list) != len(c_list):
             return jsonify({'status': False, 'response': 'Exceed max limited or question & contet not match'})
 
-        for q in q_list:
-            q["question"] 
+        q_list = [helper.text_to_index(q["question"], voc) for q in q_list["question"]]
+        c_list = [helper.text_to_index(c["context"], voc) for c in c_list["context"]]
+
+        batch_q = keras.preprocessing.sequence.pad_sequences(q_list,
+                                                             value=voc[
+                                                                 "<PAD>"],
+                                                             padding='post',
+                                                             maxlen=16)
+    
+        batch_c = keras.preprocessing.sequence.pad_sequences(c_list,
+                                                             value=voc[
+                                                                "<PAD>"],
+                                                             padding='post')
+
+        start_p, end_p = sess.run([model.output_layer_1, model.output_layer_2],
+                                  feed_dict={
+                                                model.context_input: dev_batch_c,
+                                                model.question_input: dev_batch_q
+                                            })
+        
+        for i, (start, end) in enumerate(zip(start_p, end_p)):
+            a_list.append(''.join(c_list[i][start: end + 1]))
 
         return jsonify({"status": True, "answer_list": a_list})
 

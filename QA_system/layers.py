@@ -25,7 +25,7 @@ class Layers:
     @staticmethod
     def rnn_block(inputs, dropout_keep_prob, scope, is_encode=True, is_compose=True):
         with tf.variable_scope(scope):
-            norm_layer = tf.contrib.layers.layer_norm(inputs)
+            # norm_layer = tf.contrib.layers.layer_norm(inputs)
 
             gru_cell_fw = tf.nn.rnn_cell.MultiRNNCell([Layers.dropout_wrapped_gru_cell(dropout_keep_prob)
                                                        for _ in range(2)])
@@ -34,7 +34,7 @@ class Layers:
 
             encode_out, _ = tf.nn.bidirectional_dynamic_rnn(cell_fw=gru_cell_fw,
                                                             cell_bw=gru_cell_bw,
-                                                            inputs=norm_layer,
+                                                            inputs=inputs,
                                                             dtype=tf.float32)
 
             if not is_compose:
@@ -42,7 +42,7 @@ class Layers:
 
             # shape [batch_size, word_length, encode_size]
             encode_out = tf.concat(list(encode_out), axis=2)
-
+            """
             if is_encode:
                 with tf.variable_scope("self_attention"):
                     self_attention = Layers.self_attention(encode_out)
@@ -50,6 +50,7 @@ class Layers:
                                            kernel_initializer=tf.truncated_normal_initializer(stddev=0.0001),
                                            activation=tf.nn.sigmoid, use_bias=False)
                     encode_out = gate * self_attention
+            """
             return encode_out
 
     @staticmethod
@@ -61,13 +62,13 @@ class Layers:
         # (batch, word, word)
         W_1_2 = tf.matmul(W_1, tf.transpose(W_2, [0, 2, 1]))
         """
-        norm_layer = tf.contrib.layers.layer_norm(encoder_output)
-        W_1_2 = tf.matmul(norm_layer, tf.transpose(norm_layer, [0, 2, 1]))
-        return tf.matmul(tf.nn.softmax(W_1_2), norm_layer)
+        # norm_layer = tf.contrib.layers.layer_norm(encoder_output)
+        W_1_2 = tf.matmul(encoder_output, tf.transpose(encoder_output, [0, 2, 1]))
+        return tf.matmul(tf.nn.softmax(W_1_2), encoder_output)
 
     @staticmethod
     def dropout_wrapped_gru_cell(in_keep_prob):
-        gru_cell = tf.contrib.rnn.GRUCell(num_units=64, activation=tf.nn.relu)
+        gru_cell = tf.contrib.rnn.GRUCell(num_units=128, activation=tf.nn.relu)
         rnn_layer = tf.contrib.rnn.DropoutWrapper(gru_cell, input_keep_prob=in_keep_prob)
         return rnn_layer
 

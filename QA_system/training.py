@@ -88,17 +88,16 @@ def train(warm_start):
         writer = tf.summary.FileWriter('model/train', sess.graph)
 
         if warm_start:
-            ckpt = tf.train.get_checkpoint_state(config.CKP_PAHT)
+            ckpt = tf.train.get_checkpoint_state(config.CKP_PATH)
             if ckpt and ckpt.model_checkpoint_path:
                 saver.restore(sess, ckpt.model_checkpoint_path)
             else:
-                print("Cannot restore model from {}".format(
-                    ckpt.model_checkpoint_path))
+                print("Cannot restore model, does not exist")
                 return
         else:
             sess.run(tf.global_variables_initializer())
 
-        global_step = 0
+        global_step = 992
 
         for epoch in range(config.TRANING_EPOCH):
 
@@ -109,8 +108,13 @@ def train(warm_start):
                 batch_sample = train_q[
                     batch_counter: batch_counter + config.BATCH_SIZE]
 
-                batch_q, batch_c, batch_s, batch_e = generate_batch(
-                    batch_sample, voc, train_c)
+                try:
+                    batch_q, batch_c, batch_s, batch_e = generate_batch(
+                        batch_sample, voc, train_c)
+                except:
+                    batch_counter += config.BATCH_SIZE
+                    global_step += 1
+                    continue
 
                 _, loss, summaries = sess.run([rm.opm, rm.loss, rm.merged],
                                               feed_dict={rm.context_input: batch_c,
@@ -122,14 +126,17 @@ def train(warm_start):
 
                 # every 16 global steps, sampling a batch to evaluate loss from
                 # devel set
-                if not global_step % 16:
+                if not global_step % 8:
                     # random batch
                     dev_index = random.randint(0, len(dev_q) - 1)
                     dev_batch_sample = dev_q[
                         dev_index: dev_index + config.BATCH_SIZE]
 
-                    dev_batch_q, dev_batch_c, dev_batch_s, dev_batch_e = generate_batch(
-                        dev_batch_sample, voc, dev_c)
+                    try:
+                        dev_batch_q, dev_batch_c, dev_batch_s, dev_batch_e = generate_batch(
+                            dev_batch_sample, voc, dev_c)
+                    except:
+                        continue
 
                     loss = sess.run(rm.loss, feed_dict={rm.context_input: dev_batch_c,
                                                         rm.question_input: dev_batch_q,
@@ -162,3 +169,4 @@ if __name__ == "__main__":
     parsed_args = parser.parse_args()
 
     train(parsed_args.start_mode)
+

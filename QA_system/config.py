@@ -7,7 +7,7 @@
 
 
 BATCH_SIZE = 128
-TRANING_EPOCH = 16
+TRANING_EPOCH = 32
 DATA_PATH = "dataset/"
 TOKEN_OF_OUT_OF_VOCABULARY = "--OOV--"
-CKP_PATH = "checkpoints/"
+CKP_PATH = "model/"

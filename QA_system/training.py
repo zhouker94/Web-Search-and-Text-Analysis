@@ -29,7 +29,7 @@ def train(warm_start):
         else:
             sess.run(tf.global_variables_initializer())
 
-        global_step = 992
+        global_step = 1984
 
         for epoch in range(config.TRANING_EPOCH):
 
@@ -58,7 +58,7 @@ def train(warm_start):
 
                 # every 16 global steps, sampling a batch to evaluate loss from
                 # devel set
-                if not global_step % 8:
+                if not global_step % 4:
                     # random batch
                     dev_index = random.randint(0, len(dev_q) - 1)
                     dev_batch_sample = dev_q[

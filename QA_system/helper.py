@@ -30,7 +30,7 @@ def load_dataset():
 
 
 def text_to_index(raw_text, vocb):
-    word_seq = tf.keras.preprocessing.text.text_to_word_sequence(raw_text)
+    word_seq = keras.preprocessing.text.text_to_word_sequence(raw_text)
 
     index_list = []
     for w in word_seq:
@@ -50,9 +50,9 @@ def generate_batch(batch_sample, voc, context):
             batch_c.append(text_to_index(context[q['context_id']], voc))
 
             first_answer = q['answers'][0]
-            answer_start = len(tf.keras.preprocessing.text.text_to_word_sequence(first_answer['answer_start']))
+            answer_start = len(keras.preprocessing.text.text_to_word_sequence(first_answer['answer_start']))
             answer_end =  answer_start + \
-                len(tf.keras.preprocessing.text.text_to_word_sequence(first_answer['text'])) - 1
+                len(keras.preprocessing.text.text_to_word_sequence(first_answer['text'])) - 1
 
             batch_s.append(answer_start)
             batch_e.append(answer_end)
@@ -69,4 +69,3 @@ def generate_batch(batch_sample, voc, context):
                                                          padding='post')
 
     return batch_q, batch_c, batch_s, batch_e
-

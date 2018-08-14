@@ -43,7 +43,7 @@ def train(warm_start):
                 batch_q, batch_c, batch_s, batch_e = helper.generate_batch(
                     batch_sample, voc, train_c)
 
-                _, loss, summaries = sess.run([rm.opm, rm.loss, rm.merged],
+                _, _, loss, summaries = sess.run([rm.opm_1, rm.opm_2, rm.loss, rm.merged],
                                               feed_dict={rm.context_input: batch_c,
                                                          rm.question_input: batch_q,
                                                          rm.label_start: batch_s,
@@ -76,14 +76,12 @@ def train(warm_start):
                     writer.add_summary(summary, global_step)
 
                 writer.add_summary(summaries, global_step)
-
-                print(
-                    " --- Epoch: {}, batch: {}, loss: {} --- ".format(epoch, batch_counter, loss))
                 batch_counter += config.BATCH_SIZE
                 global_step += 1
 
             save_path = saver.save(sess, "model/rnn")
             print("Model saved in path: {}".format(save_path))
+            rm.export_model(sess, save_path)
 
 
 if __name__ == "__main__":

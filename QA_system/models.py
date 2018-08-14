@@ -104,12 +104,47 @@ class RnnModel(Model):
             tf.summary.histogram('cross_entropy_1', cross_entropy_1)
             tf.summary.histogram('cross_entropy_2', cross_entropy_2)
 
-            self.loss = tf.reduce_mean(tf.add(cross_entropy_1, cross_entropy_2))
+            self.loss_1 = tf.reduce_mean(cross_entropy_1)
+            self.loss_2 = tf.reduce_mean(cross_entropy_2)
+            self.loss = tf.add(self.loss_1, self.loss_2)
+
             tf.summary.scalar("training_Loss", self.loss)
 
             with tf.name_scope('adam_optimizer'):
-                self.opm = tf.train.AdamOptimizer(1e-3).minimize(self.loss, name="optimizer")
+                self.opm_1 = tf.train.AdamOptimizer(1e-3).minimize(self.loss_1, name="optimizer")
+                self.opm_2 = tf.train.AdamOptimizer(1e-3).minimize(self.loss_2, name="optimizer")
 
+
+    def export_model(sess, export_path):
+        builder = tf.saved_model.builder.SavedModelBuilder(export_path)
+
+        tensor_info_question = tf.saved_model.utils.build_tensor_info(self.question_input)
+        tensor_info_context = tf.saved_model.utils.build_tensor_info(self.context_input)
+        tensor_info_start = tf.saved_model.utils.build_tensor_info(self.output_layer_1)
+        tensor_info_end = tf.saved_model.utils.build_tensor_info(self.output_layer_2)
+
+        prediction_signature = (
+            tf.saved_model.signature_def_utils.build_signature_def(
+                inputs={
+                    'questions': tensor_info_question,
+                    'contexts': tensor_info_context
+                },
+                outputs={
+                    'start_positions': tensor_info_start,
+                    'end_positions': tensor_info_end,
+                },
+                method_name=tf.saved_model.signature_constants.PREDICT_METHOD_NAME))
+
+        builder.add_meta_graph_and_variables(
+            sess, [tf.saved_model.tag_constants.SERVING],
+            signature_def_map={
+                tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY:
+                    prediction_signature,
+            },
+            main_op=tf.tables_initializer(),
+            strip_default_attrs=True)
+
+        builder.save()
 
 """
 class CnnModel(Model):

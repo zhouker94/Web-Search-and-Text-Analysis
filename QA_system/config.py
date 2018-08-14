@@ -6,7 +6,7 @@
 # @Software: PyCharm Community Edition
 
 
-BATCH_SIZE = 128
+BATCH_SIZE = 64
 TRANING_EPOCH = 32
 DATA_PATH = "dataset/"
 TOKEN_OF_OUT_OF_VOCABULARY = "--OOV--"

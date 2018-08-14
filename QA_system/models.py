@@ -55,7 +55,6 @@ class RnnModel(Model):
 
         with tf.variable_scope("qc_decode_block"):
             decode_c = Layers.rnn_block(c_attention, self.dropout_keep_prob, "decode_qc")
-            # decode_qc_2 = Layers.rnn_block(c_attention, self.dropout_keep_prob, "decode_qc_2")
 
             fc_1 = tf.contrib.layers.fully_connected(decode_c,
                                                      256,
@@ -69,14 +68,19 @@ class RnnModel(Model):
                                                      activation_fn=tf.nn.relu
                                                      )
 
+            fc_3 = tf.contrib.layers.fully_connected(fc_1,
+                                                     256,
+                                                     weights_initializer=tf.truncated_normal_initializer(stddev=0.001),
+                                                     activation_fn=tf.nn.relu
+                                                     )
 
-            output_1 = tf.contrib.layers.fully_connected(decode_c,
+            output_1 = tf.contrib.layers.fully_connected(fc_2,
                                                      1,
                                                      weights_initializer=tf.truncated_normal_initializer(stddev=0.001),
                                                      activation_fn=tf.nn.relu
                                                      )
 
-            output_2 = tf.contrib.layers.fully_connected(decode_c,
+            output_2 = tf.contrib.layers.fully_connected(fc_3,
                                                      1,
                                                      weights_initializer=tf.truncated_normal_initializer(stddev=0.001),
                                                      activation_fn=tf.nn.relu

@@ -29,7 +29,7 @@ def train(warm_start):
         else:
             sess.run(tf.global_variables_initializer())
 
-        global_step = 1984
+        global_step = 0
 
         for epoch in range(config.TRANING_EPOCH):
 
@@ -40,13 +40,8 @@ def train(warm_start):
                 batch_sample = train_q[
                     batch_counter: batch_counter + config.BATCH_SIZE]
 
-                try:
-                    batch_q, batch_c, batch_s, batch_e = helper.generate_batch(
-                        batch_sample, voc, train_c)
-                except:
-                    batch_counter += config.BATCH_SIZE
-                    global_step += 1
-                    continue
+                batch_q, batch_c, batch_s, batch_e = helper.generate_batch(
+                    batch_sample, voc, train_c)
 
                 _, loss, summaries = sess.run([rm.opm, rm.loss, rm.merged],
                                               feed_dict={rm.context_input: batch_c,
@@ -56,19 +51,16 @@ def train(warm_start):
                                                          rm.dropout_keep_prob: 0.8
                                                          })
 
-                # every 16 global steps, sampling a batch to evaluate loss from
+                # every 8 global steps, sampling a batch to evaluate loss from
                 # devel set
-                if not global_step % 4:
+                if not global_step % 8:
                     # random batch
                     dev_index = random.randint(0, len(dev_q) - 1)
                     dev_batch_sample = dev_q[
                         dev_index: dev_index + config.BATCH_SIZE]
 
-                    try:
-                        dev_batch_q, dev_batch_c, dev_batch_s, dev_batch_e = helper.generate_batch(
-                            dev_batch_sample, voc, dev_c)
-                    except:
-                        continue
+                    dev_batch_q, dev_batch_c, dev_batch_s, dev_batch_e = helper.generate_batch(
+                        dev_batch_sample, voc, dev_c)
 
                     loss = sess.run(rm.loss, feed_dict={rm.context_input: dev_batch_c,
                                                         rm.question_input: dev_batch_q,

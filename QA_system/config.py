@@ -6,8 +6,15 @@
 # @Software: PyCharm Community Edition
 
 
+import os
+
+
 BATCH_SIZE = 64
 TRANING_EPOCH = 32
-DATA_PATH = "dataset/"
+
+DATA_DIR = os.environ['DATA_DIR'] + '/'
+
+DATA_PATH = DATA_DIR + ""
 TOKEN_OF_OUT_OF_VOCABULARY = "--OOV--"
-CKP_PATH = "model/"
+CKP_PATH = DATA_DIR + ""
+LOG_PATH = DATA_DIR + ""

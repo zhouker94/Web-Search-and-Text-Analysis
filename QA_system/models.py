@@ -115,7 +115,7 @@ class RnnModel(Model):
                 self.opm_2 = tf.train.AdamOptimizer(1e-3).minimize(self.loss_2, name="optimizer")
 
 
-    def export_model(sess, export_path):
+    def export_model(self, sess, export_path):
         builder = tf.saved_model.builder.SavedModelBuilder(export_path)
 
         tensor_info_question = tf.saved_model.utils.build_tensor_info(self.question_input)
@@ -141,8 +141,7 @@ class RnnModel(Model):
                 tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY:
                     prediction_signature,
             },
-            main_op=tf.tables_initializer(),
-            strip_default_attrs=True)
+            main_op=tf.tables_initializer())
 
         builder.save()
 

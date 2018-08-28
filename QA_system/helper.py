@@ -43,19 +43,19 @@ def text_to_index(raw_text, vocb):
 
 
 def generate_batch(batch_sample, voc, context):
+
     batch_q, batch_c, batch_s, batch_e = [], [], [], []
     for q in batch_sample:
-        if not q["is_impossible"]:
-            batch_q.append(text_to_index(q['question'], voc))
-            batch_c.append(text_to_index(context[q['context_id']], voc))
+        batch_q.append(text_to_index(q['question'], voc))
+        batch_c.append(text_to_index(context[q['context_id']], voc))
 
-            first_answer = q['answers'][0]
-            answer_start = len(keras.preprocessing.text.text_to_word_sequence(first_answer['answer_start']))
-            answer_end =  answer_start + \
-                len(keras.preprocessing.text.text_to_word_sequence(first_answer['text'])) - 1
+        first_answer = q['answers'][0]
+        answer_start = len(keras.preprocessing.text.text_to_word_sequence(first_answer['answer_start']))
+        answer_end =  answer_start + \
+            len(keras.preprocessing.text.text_to_word_sequence(first_answer['text'])) - 1
 
-            batch_s.append(answer_start)
-            batch_e.append(answer_end)
+        batch_s.append(answer_start)
+        batch_e.append(answer_end)
 
     batch_q = keras.preprocessing.sequence.pad_sequences(batch_q,
                                                          value=voc[

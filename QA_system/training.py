@@ -10,7 +10,10 @@ import helper
 
 
 def train(warm_start):
-    train_c, train_q, dev_c, dev_q, emb_mat, voc = helper.load_dataset()
+    train_c, train_q, _, _, emb_mat, voc = helper.load_dataset()
+
+    dev_q = train_q[:int(len(train_c) / 10)]
+    train_q = train_q[int(len(train_c) / 10): ]
 
     with tf.Session() as sess:
 
@@ -35,16 +38,12 @@ def train(warm_start):
             batch_counter = 0
             np.random.shuffle(train_q)
             while batch_counter < len(train_q):
+                
+                batch_sample = train_q[
+                               batch_counter: batch_counter + config.BATCH_SIZE]
 
-                try:
-                    batch_sample = train_q[
-                                   batch_counter: batch_counter + config.BATCH_SIZE]
-
-                    batch_q, batch_c, batch_s, batch_e = helper.generate_batch(
-                        batch_sample, voc, train_c)
-                except:
-                    batch_counter += config.BATCH_SIZE
-                    continue
+                batch_q, batch_c, batch_s, batch_e = helper.generate_batch(
+                    batch_sample, voc, train_c)
 
                 _, _, loss, summaries = sess.run([rm.opm_1, rm.opm_2, rm.loss, rm.merged],
                                                  feed_dict={rm.context_input: batch_c,
@@ -61,12 +60,8 @@ def train(warm_start):
                     dev_batch_sample = dev_q[
                                        dev_index: dev_index + config.BATCH_SIZE]
 
-                    try:
-                        dev_batch_q, dev_batch_c, dev_batch_s, dev_batch_e = helper.generate_batch(
-                            dev_batch_sample, voc, train_c)
-                    except:
-                        batch_counter += config.BATCH_SIZE
-                        continue
+                    dev_batch_q, dev_batch_c, dev_batch_s, dev_batch_e = helper.generate_batch(
+                        dev_batch_sample, voc, train_c)
 
                     loss = sess.run(rm.loss, feed_dict={rm.context_input: dev_batch_c,
                                                         rm.question_input: dev_batch_q,

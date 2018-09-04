@@ -12,8 +12,8 @@ import os
 BATCH_SIZE = 64
 TRANING_EPOCH = 32
 
-# DATA_DIR = os.environ['DATA_DIR'] + '/'
-DATA_DIR = 'dataset/'
+DATA_DIR = os.environ['DATA_DIR'] + '/'
+# DATA_DIR = 'dataset/'
 
 DATA_PATH = DATA_DIR + ""
 TOKEN_OF_OUT_OF_VOCABULARY = "--OOV--"

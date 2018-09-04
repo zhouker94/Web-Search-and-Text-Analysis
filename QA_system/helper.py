@@ -13,6 +13,7 @@ def load_dataset():
         # training data is list of dictionary
         train_q = pickle.load(f)
 
+    '''
     with open(config.DATA_PATH + "devset_context.pickle", "rb") as f:
         # training data is list of dictionary
         dev_c = pickle.load(f)
@@ -20,13 +21,14 @@ def load_dataset():
     with open(config.DATA_PATH + "devset_question.pickle", "rb") as f:
         # training data is list of dictionary
         dev_q = pickle.load(f)
+    '''
 
     emb_mat = np.load(config.DATA_PATH + "word_embedding_matrix.npy")
 
     with open(config.DATA_PATH + "vocabulary.pickle", "rb") as f:
         voc = pickle.load(f)
 
-    return train_c, train_q, dev_c, dev_q, emb_mat, voc
+    return train_c, train_q, None, None, emb_mat, voc
 
 
 def text_to_index(raw_text, vocb):

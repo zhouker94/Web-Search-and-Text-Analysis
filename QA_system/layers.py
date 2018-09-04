@@ -42,7 +42,7 @@ class Layers:
 
             # shape [batch_size, word_length, encode_size]
             encode_out = tf.concat(list(encode_out), axis=2)
-            encode_out = Layers.self_attention(encode_out, encode_out, [256])
+            # encode_out = Layers.self_attention(encode_out, encode_out, [128])
 
             """
             if is_encode:
@@ -65,7 +65,7 @@ class Layers:
         return output
 
     @staticmethod
-    def self_attention(inputs, memory, hidden, keep_prob=1.0, activation=tf.nn.relu, scope="dot_attention"):
+    def self_attention(inputs, memory, hidden, scope, keep_prob=1.0, activation=tf.nn.relu):
         with tf.variable_scope(scope):
             with tf.variable_scope("attention"):
                 inputs_ = Layers.add_dense_layer(inputs, hidden, keep_prob, activation=activation, use_bias=False)
@@ -81,7 +81,7 @@ class Layers:
 
     @staticmethod
     def dropout_wrapped_gru_cell(in_keep_prob):
-        gru_cell = tf.contrib.rnn.GRUCell(num_units=128, activation=tf.nn.relu)
+        gru_cell = tf.contrib.rnn.GRUCell(num_units=64, activation=tf.nn.relu)
         rnn_layer = tf.contrib.rnn.DropoutWrapper(gru_cell, input_keep_prob=in_keep_prob)
         return rnn_layer
 

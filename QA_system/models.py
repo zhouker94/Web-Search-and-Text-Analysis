@@ -49,27 +49,26 @@ class RnnModel(Model):
             encode_q = Layers.rnn_block(self.q, self.dropout_keep_prob, "eq")
 
         with tf.variable_scope("question_context_coattention"):
-            c_q_coattention = Layers.coattention(encode_c, encode_q)
-            q_c_coattention = Layers.coattention(encode_q, encode_c)
-            c_attention = Layers.coattention(c_q_coattention, q_c_coattention)
+            c_q_coattention = Layers.self_attention(encode_c, encode_q, [128], 'c_q_coattention')
+            c_c_coattention = Layers.self_attention(c_q_coattention, c_q_coattention, [128], 'c_c_coattention')
 
         with tf.variable_scope("qc_decode_block"):
-            decode_c = Layers.rnn_block(c_attention, self.dropout_keep_prob, "decode_qc")
+            # decode_c = Layers.rnn_block(c_c_coattention, self.dropout_keep_prob, "decode_qc")
 
-            fc_1 = tf.contrib.layers.fully_connected(decode_c,
-                                                     256,
+            fc_1 = tf.contrib.layers.fully_connected(c_c_coattention,
+                                                     128,
                                                      weights_initializer=tf.truncated_normal_initializer(stddev=0.001),
                                                      activation_fn=tf.nn.relu
                                                      )
             
             fc_2 = tf.contrib.layers.fully_connected(fc_1,
-                                                     256,
+                                                     128,
                                                      weights_initializer=tf.truncated_normal_initializer(stddev=0.001),
                                                      activation_fn=tf.nn.relu
                                                      )
 
             fc_3 = tf.contrib.layers.fully_connected(fc_1,
-                                                     256,
+                                                     128,
                                                      weights_initializer=tf.truncated_normal_initializer(stddev=0.001),
                                                      activation_fn=tf.nn.relu
                                                      )

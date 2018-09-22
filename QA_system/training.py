@@ -15,6 +15,11 @@ def train(warm_start):
     dev_q = train_q[:int(len(train_c) / 10)]
     train_q = train_q[int(len(train_c) / 10):]
 
+    total_train_loss = 0
+    total_val_loss = 0
+
+    min_val_loss = float("inf")
+
     with tf.Session() as sess:
 
         rm = models.RnnModel(emb_mat)
@@ -45,15 +50,20 @@ def train(warm_start):
                 batch_q, batch_c, batch_s, batch_e = helper.generate_batch(
                     batch_sample, voc, train_c)
 
-                _, _, train_loss, summaries = sess.run([rm.opm_1, rm.opm_2, rm.loss, rm.merged],
-                                                       feed_dict={rm.context_input: batch_c,
-                                                                  rm.question_input: batch_q,
-                                                                  rm.label_start: batch_s,
-                                                                  rm.label_end: batch_e,
-                                                                  rm.dropout_keep_prob: 0.8
-                                                                  })
-
-                print("current train loss is {}".format(train_loss))
+                _, _, loss, summaries = sess.run([rm.opm_1, rm.opm_2, rm.loss, rm.merged],
+                                                 feed_dict={rm.context_input: batch_c,
+                                                            rm.question_input: batch_q,
+                                                            rm.label_start: batch_s,
+                                                            rm.label_end: batch_e,
+                                                            rm.dropout_keep_prob: 0.8
+                                                            })
+                total_train_loss += loss
+                print(
+                    '''
+                    global step: {},
+                    current training loss is {},  
+                    total average training loss is {}
+                    '''.format(global_step, loss, total_train_loss / global_step))
 
                 # every 8 global steps, sampling a batch to evaluate loss from
                 # devel set
@@ -75,23 +85,37 @@ def train(warm_start):
                     summary = tf.Summary()
                     summary_value = summary.value.add()
                     summary_value.simple_value = loss
-                    summary_value.tag = "evaluate_loss"
+                    summary_value.tag = "validation_loss"
                     writer.add_summary(summary, global_step)
-                    print("current eval loss is {}".format(loss))
+                    total_val_loss += loss
+                    print(
+                        '''
+                        current validation loss is {},
+                        total average loss is {}
+                        '''.format(loss, total_val_loss / global_step))
 
                 writer.add_summary(summaries, global_step)
                 batch_counter += config.BATCH_SIZE
                 global_step += 1
 
-        save_path = saver.save(sess, config.CKP_PATH + 'RNN')
-        print("Model saved in path: {}".format(save_path))
-        rm.export_model(sess, save_path)
+        if min_val_loss >= total_val_loss:
+            min_val_loss = total_val_loss
+            save_path = saver.save(sess, config.CKPT_PATH + "rnet_v_00")
+
+            print(
+                '''
+                Model saved in path: {} at time step {};
+                Current eval loss is {}.
+                '''.format(save_path, global_step, min_val_loss))
+
+            rm.export_model(sess, config.RESULT_PATH)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--start_mode', type=bool, default=False,
+    parser.add_argument('--start_mode',
+                        type=bool,
+                        default=False,
                         help='Is warm start from existing checkpoint?')
     parsed_args = parser.parse_args()
-
     train(parsed_args.start_mode)

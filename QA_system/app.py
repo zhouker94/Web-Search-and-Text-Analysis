@@ -25,54 +25,55 @@ def predict():
         {
             "question_list":
             [
-                {"question": "..."},
-                {"question": "..."},
+                {"id": 0, "text": "..."},
+                {"id": 1, "text": "..."},
                 
                 ...
 
-                {"question": "..."}
+                {"id": n, "text": "..."}
             ],
-            "context_list":
-            [
-                {"context": "..."},
-                {"context": "..."},
-
+            "document":
+                "
                 ...
-
-                {"context": "..."}
-            ]
+                ...
+                ...
+                "
         }
         """
 
         json_ = request.get_json()
-        
-        q_list = json_["question_list"]
-        c_list = json_["context_list"]
-        a_list = []
 
-        if len(q_list) > 256 or len(q_list) != len(c_list):
-            return jsonify({'status': False, 'response': 'Exceed max limited or question & contet not match'})
+        question_list = json_["question_list"]
+        context = json_["document"]
+        answer_list = []
 
-        q_list = [helper.text_to_index(q["question"], voc) for q in q_list["question"]]
-        c_list = [helper.text_to_index(c["context"], voc) for c in c_list["context"]]
+        if len(question_list) > 256:
+            return jsonify({'status': False,
+                            'response': 'Exceed max limited or question & context not match'})
 
-        batch_q = keras.preprocessing.sequence.pad_sequences(q_list,
+        question_list = [helper.text_to_index(q["text"], voc)
+                    for q in question_list]
+
+        context = helper.text_to_index(context, voc)
+        context_list = [context] * len(question_list)
+
+        batch_q = keras.preprocessing.sequence.pad_sequences(question_list,
                                                              value=voc[
                                                                  "<PAD>"],
                                                              padding='post',
                                                              maxlen=16)
-    
-        batch_c = keras.preprocessing.sequence.pad_sequences(c_list,
+
+        batch_c = keras.preprocessing.sequence.pad_sequences(context_list,
                                                              value=voc[
-                                                                "<PAD>"],
+                                                                 "<PAD>"],
                                                              padding='post')
 
         start_p, end_p = sess.run([model.output_layer_1, model.output_layer_2],
                                   feed_dict={
-                                                model.context_input: dev_batch_c,
-                                                model.question_input: dev_batch_q
-                                            })
-        
+            model.context_input: dev_batch_c,
+            model.question_input: dev_batch_q
+        })
+
         for i, (start, end) in enumerate(zip(start_p, end_p)):
             a_list.append(''.join(c_list[i][start: end + 1]))
 
@@ -80,7 +81,7 @@ def predict():
 
 
 if __name__ == '__main__':
-    
+
     # load GLOVE and Vocabulary
 
     emb_mat = np.load(config.DATA_PATH + "word_embedding_matrix.npy")
@@ -93,7 +94,7 @@ if __name__ == '__main__':
 
         model = models.RnnModel(emb_mat)
         saver = tf.train.Saver()
-        
+
         # start model
         ckpt = tf.train.get_checkpoint_state(config.CKP_PATH)
         if ckpt and ckpt.model_checkpoint_path:
@@ -101,8 +102,7 @@ if __name__ == '__main__':
         else:
             print("Cannot restore model")
             return
-        
+
         print('app start')
 
         app.run(host='0.0.0.0', port=5000, debug=True)
-

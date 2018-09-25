@@ -77,7 +77,8 @@ class RnnModel(Model):
 
         with tf.variable_scope("qc_decode_block"):
 
-            out_decode = Layers.rnn_layer(c_c_coattention)
+            out_decode = Layers.birnn_layer(c_c_coattention)
+            out_decode = tf.concat(list(out_decode), axis=2)
 
             out_decode = tf.contrib.layers.fully_connected(out_decode,
                                                            256,
